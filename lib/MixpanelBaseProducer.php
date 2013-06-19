@@ -40,6 +40,12 @@ abstract class MixpanelBaseProducer extends MixpanelBase {
 
 
     /**
+     * If the queue reaches this size we'll auto-flush to prevent out of memory errors
+     * @var int
+     */
+    protected $_max_queue_size = 1000;
+
+    /**
      * @param $token
      * @param array $options
      */
@@ -66,10 +72,19 @@ abstract class MixpanelBaseProducer extends MixpanelBase {
 
 
     /**
-     * Flush the queue when we destruct the client
+     * Flush the queue when we destruct the client with retries
      */
     public function __destruct() {
-        $this->flush();
+        $attempts = 0;
+        $max_attempts = 10;
+        $success = false;
+        while (!$success && $attempts < $max_attempts) {
+            if ($this->_debug()) {
+                $this->_log("destruct flush attempt #".($attempts+1));
+            }
+            $success = $this->flush();
+            $attempts++;
+        }
     }
 
 
@@ -89,14 +104,26 @@ abstract class MixpanelBaseProducer extends MixpanelBase {
             $batch_size = min(array($queue_size, $desired_batch_size, $this->_options['max_batch_size']));
             $batch = array_splice($this->_queue, 0, $batch_size);
             $succeeded = $this->_persist($batch);
-            $queue_size = count($this->_queue);
-            if ($this->_debug()) {
-                if ($succeeded) {
-                    $this->_log("Batch of $batch_size consumed, queue size is now $queue_size");
-                } else {
+
+            if (!$succeeded) {
+                if ($this->_debug()) {
                     $this->_log("Batch consumption failed!");
                 }
+                $this->_queue = array_merge($batch, $this->_queue);
+
+                if ($this->_debug()) {
+                    $this->_log("added batch back to queue, queue size is now $queue_size");
+                }
+
+                return false;
             }
+
+            $queue_size = count($this->_queue);
+
+            if ($this->_debug()) {
+                $this->_log("Batch of $batch_size consumed, queue size is now $queue_size");
+            }
+
         }
         return $succeeded;
     }
@@ -149,6 +176,12 @@ abstract class MixpanelBaseProducer extends MixpanelBase {
      */
     public function enqueue($message = array()) {
         array_push($this->_queue, $message);
+
+        // force a flush if we've reached our threshold
+        if (count($this->_queue) > $this->_max_queue_size) {
+            $this->flush();
+        }
+
         if ($this->_debug()) {
             $this->_log("Queued message: ".json_encode($message));
         }

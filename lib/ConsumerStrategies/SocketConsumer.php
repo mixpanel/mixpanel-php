@@ -60,9 +60,9 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
 
 
     /**
-     * @var bool flag to denote if the socket has failed
+     * @var resource holds the socket resource
      */
-    private $_socket_failed;
+    private $_socket;
 
 
     public function __construct($options = array()) {
@@ -71,8 +71,7 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
 
         $this->_host = $options['host'];
         $this->_endpoint = $options['endpoint'];
-        $this->_timeout = array_key_exists('timeout', $options) ? $options['timeout'] : 1;
-        $this->_debug = array_key_exists('debug', $options) ? ($options['debug'] == true) : false;
+        $this->_timeout = array_key_exists('timeout', $options) ? $options['timeout'] : 100;
 
         if (array_key_exists('use_ssl', $options) && $options['use_ssl'] == true) {
             $this->_protocol = "ssl";
@@ -91,12 +90,12 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
      */
     public function persist($batch) {
 
-        $data = "data=".$this->_encode($batch);
-        $socket = $this->createSocket();
-
-        if (!$socket) {
+        $socket = $this->_getSocket();
+        if (!is_resource($socket)) {
             return false;
         }
+
+        $data = "data=".$this->_encode($batch);
 
         $body = "";
         $body.= "POST ".$this->_endpoint." HTTP/1.1\r\n";
@@ -107,20 +106,33 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
         $body.= "\r\n";
         $body.= $data;
 
-        return $this->write($socket, $body);
+        return $this->_write($socket, $body);
     }
 
 
     /**
-     * Create a new persistent socket
+     * Return cached socket if open or create a new persistent socket
      * @return bool|resource
      */
-    private function createSocket() {
+    private function _getSocket() {
+        if(is_resource($this->_socket)) {
 
-        if ($this->_socket_failed) {
-            return false;
+            if ($this->_debug()) {
+                $this->_log("Using existing socket");
+            }
+
+            return $this->_socket;
+        } else {
+
+            if ($this->_debug()) {
+                $this->_log("Creating new socket at ".time());
+            }
+
+            return $this->_createSocket();
         }
+    }
 
+    private function _createSocket($retry = true) {
         try {
             $socket = pfsockopen($this->_protocol . "://" . $this->_host, $this->_port, $err_no, $err_msg, $this->_timeout);
 
@@ -130,17 +142,23 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
 
             if ($err_no != 0) {
                 $this->_handleError($err_no, $err_msg);
-                $this->_socket_failed = true;
-                return false;
+                return $retry == true ? $this->_createSocket(false) : false;
+            } else {
+                // cache the socket
+                $this->_socket = $socket;
+                return $socket;
             }
-
-            return $socket;
 
         } catch (Exception $e) {
             $this->_handleError($e->getCode(), $e->getMessage());
-            $this->_socket_failed = true;
-            return false;
+            return $retry == true ? $this->_createSocket(false) : false;
         }
+    }
+
+    private function _destroySocket() {
+        $socket = $this->_socket;
+        $this->_socket = null;
+        fclose($socket);
     }
 
 
@@ -151,20 +169,39 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
      * @param bool $retry
      * @return bool
      */
-    private function write($socket, $data, $retry = true) {
+    private function _write($socket, $data, $retry = true) {
 
         $bytes_sent = 0;
         $bytes_total = strlen($data);
         $socket_closed = false;
+        $success = true;
+        $max_bytes_per_write = 10;
+
+        // if we have no data to write just return true
+        if ($bytes_total == 0) {
+            return true;
+        }
 
         // try to write the data
         while (!$socket_closed && $bytes_sent < $bytes_total) {
+
             try {
-                $bytes = fwrite($socket, $data);
+                $bytes = fwrite($socket, $data, $max_bytes_per_write);
+
+                if ($this->_debug()) {
+                    $this->_log("Socket wrote ".$bytes." bytes");
+                }
+
+                // if we actually wrote data, then remove the written portion from $data left to write
+                if ($bytes > 0) {
+                    $data = substr($data, $max_bytes_per_write);
+                }
+
             } catch (Exception $e) {
                 $this->_handleError($e->getCode(), $e->getMessage());
                 $socket_closed = true;
             }
+
             if (isset($bytes) && $bytes) {
                 $bytes_sent += $bytes;
             } else {
@@ -172,18 +209,22 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
             }
         }
 
-        // try opening the socket again if it's closed
+        // create a new socket if the current one is closed and retry the message
         if ($socket_closed) {
-            fclose($socket);
+
+            $this->_destroySocket();
 
             if ($retry) {
-                $socket = $this->createSocket();
-                if ($socket) return $this->write($socket, $data, false);
+                if ($this->_debug()) {
+                    $this->_log("Retrying socket write...");
+                }
+                $socket = $this->_getSocket();
+                if ($socket) return $this->_write($socket, $data, false);
             }
+
             return false;
         }
 
-        $success = true;
 
         // only wait for the response in debug mode
         if ($this->_debug()) {
@@ -204,13 +245,39 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
      * @return array
      */
     private function handleResponse($response) {
+
         $lines = explode("\n", $response);
+
+        // extract headers
+        $headers = array();
+        foreach($lines as $line) {
+            $kvsplit = explode(":", $line);
+            if (count($kvsplit) == 2) {
+                $header = $kvsplit[0];
+                $value = $kvsplit[1];
+                $headers[$header] = trim($value);
+            }
+
+        }
+
+        // extract status
         $line_one_exploded = explode(" ", $lines[0]);
         $status = $line_one_exploded[1];
+
+        // extract body
         $body = $lines[count($lines) - 1];
+
+        error_log(print_r($body, true));
+
+        // if the connection has been closed lets kill the socket
+        if ($headers['Connection'] == "close") {
+            $this->_destroySocket();
+            $this->_log("Server told us connection closed so lets destroy the socket so it'll reconnect on next call");
+        }
+
         $ret = array(
             "status"  => $status,
-            "body" => $body
+            "body" => $body,
         );
         return $ret;
     }

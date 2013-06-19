@@ -111,7 +111,7 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
             $this->_log("Making forked cURL call to $url");
         }
 
-        $exec = "curl -X POST -H 'Content-Type: application/x-www-form-urlencoded' -d $data '$url'";
+        $exec = 'curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -d ' . $data . ' "' . $url . '"';
 
         if(!$this->_debug()) {
             $exec .= " >/dev/null 2>&1 &";

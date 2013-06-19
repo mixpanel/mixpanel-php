@@ -14,7 +14,8 @@ class MixpanelBase {
      * @var array
      */
     private $_defaults = array(
-        "max_batch_size"    => 50, // the max batch size Mixpanel will accept is 50
+        "max_batch_size"    => 50, // the max batch size Mixpanel will accept is 50,
+        "max_queue_size"    => 1000, // the max num of items to hold in memory before flushing
         "debug"             => false, // enable/disable debug mode
         "consumer"          => "socket", // which consumer to use
         "host"              => "api.mixpanel.com", // the host name for api calls
