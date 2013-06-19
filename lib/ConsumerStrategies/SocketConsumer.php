@@ -175,7 +175,7 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
         $bytes_total = strlen($data);
         $socket_closed = false;
         $success = true;
-        $max_bytes_per_write = 10;
+        $max_bytes_per_write = 8192;
 
         // if we have no data to write just return true
         if ($bytes_total == 0) {
