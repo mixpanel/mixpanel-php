@@ -1,0 +1,25 @@
+{
+    "name": "mixpanel/mixpanel-php",
+    "description": "A PHP library for Mixpanel Analytics",
+    "keywords": [
+        "mixpanel",
+        "mixpanel php"
+    ],
+    "homepage": "https://mixpanel.com/help/reference/php",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Mixpanel <dev@mixpanel.com>",
+            "homepage": "https://mixpanel.com/"
+        }
+    ],
+    "require": {
+        "php": ">=5.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "3.7.*"
+    },
+    "autoload": {
+        "files": ["lib/MixpanelProducer.php"]
+    }
+}
