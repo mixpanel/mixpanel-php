@@ -1,6 +1,6 @@
 {
     "name": "mixpanel/mixpanel-php",
-    "description": "A PHP library for Mixpanel Analytics",
+    "description": "The Official PHP library for Mixpanel",
     "keywords": [
         "mixpanel",
         "mixpanel php"
@@ -20,6 +20,6 @@
         "phpunit/phpunit": "3.7.*"
     },
     "autoload": {
-        "files": ["lib/MixpanelProducer.php"]
+        "files": ["lib/Mixpanel.php"]
     }
 }

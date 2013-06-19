@@ -1,6 +1,9 @@
 <?php
-require_once("../lib/Mixpanel.php"); // import the Mixpanel class
-$mp = Mixpanel::getInstance("1ef7e30d2a58d27f4b90c42e31d6d7ad"); // instantiate the Mixpanel class
+// import the Mixpanel class
+require_once("../lib/Mixpanel.php");
+
+// instantiate the Mixpanel class
+$mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN");
 
 // create an alias for user id 12345
 $mp->createAlias(12345, "john.doe@example.com");

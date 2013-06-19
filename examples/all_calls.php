@@ -1,5 +1,5 @@
 <?php
-$mp = new Mixpanel("1ef7e30d2a58d27f4b90c42e31d6d7ad", array(
+$mp = new Mixpanel("MIXPANEL_PROJECT_TOKEN", array(
     "debug"             => true,
     "consumers"         => array("ob" => "ObConsumer"),
     "consumer"          => "ob",

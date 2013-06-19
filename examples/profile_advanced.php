@@ -3,7 +3,7 @@
 require_once("../lib/Mixpanel.php");
 
 // instantiate the Mixpanel class
-$mp = Mixpanel::getInstance("1ef7e30d2a58d27f4b90c42e31d6d7ad");
+$mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN");
 
 // create or update a profile with First Name, Last Name, E-Mail Address, Phone Number, and Favorite Color
 $mp->people->set(12345, array(
