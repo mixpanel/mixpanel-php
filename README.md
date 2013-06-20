@@ -20,7 +20,7 @@ require_once("/path/to/vendor/mixpanel/mixpanel-php/lib/Mixpanel.php");
 $mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN");
 
 // track an event
-$mp->track("button clicked", array("label" => "sign-up"); // track an event
+$mp->track("button clicked", array("label" => "sign-up")); // track an event
 
 // create/update a profile for user id 12345
 $mp->people->set(12345, array(
