@@ -65,8 +65,9 @@ $mp->people->set(12345, array(
 ));
 ```
 
-Full Reference Documentation
+Documentation
 -------------
+<a href="https://mixpanel.com/help/reference/php">Reference Docs</a>
 <a href="http://mixpanel.github.io/mixpanel-php">Full API Reference</a>
 
 For further examples and options checkout out the "examples" folder
