@@ -47,7 +47,7 @@ Install Manually
 ```php
 <?php
 // import Mixpanel
-require 'mixpanel-php/lib/Mixpanel.php'
+require 'mixpanel-php/lib/Mixpanel.php';
 
 // get the Mixpanel class instance, replace with your project token
 $mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN");
