@@ -1,6 +1,8 @@
 <?php
 require_once(dirname(__FILE__) . "/AbstractConsumer.php");
-
+/**
+ * Consumes messages and writes them to a file
+ */
 class ConsumerStrategies_FileConsumer extends ConsumerStrategies_AbstractConsumer {
 
     /**
@@ -9,6 +11,10 @@ class ConsumerStrategies_FileConsumer extends ConsumerStrategies_AbstractConsume
     private $_file;
 
 
+    /**
+     * Creates a new FileConsumer and assigns properties from the $options array
+     * @param array $options
+     */
     function __construct($options) {
         parent::__construct($options);
 

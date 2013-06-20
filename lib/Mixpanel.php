@@ -1,40 +1,139 @@
 <?php
-require_once(dirname(__FILE__) . "/MixpanelBase.php");
-require_once(dirname(__FILE__) . "/MixpanelPeopleProducer.php");
-require_once(dirname(__FILE__) . "/MixpanelEventsProducer.php");
 
-class Mixpanel extends MixpanelBase {
+require_once(dirname(__FILE__) . "/Base/MixpanelBase.php");
+require_once(dirname(__FILE__) . "/Producers/MixpanelPeople.php");
+require_once(dirname(__FILE__) . "/Producers/MixpanelEvents.php");
+
+/**
+ * This is the main class for the Mixpanel PHP Library which provides all of the methods you need to track events and
+ * create/update profiles.
+ *
+ * Architecture
+ * -------------
+ *
+ * This library is built such that all messages are buffered in an in-memory "queue"
+ * The queue will be automatically flushed at the end of every request. Alternatively, you can call "flush()" manually
+ * at any time. Flushed messages will be passed to a Consumer's "persist" method. The library comes with a handful of
+ * Consumers. The "SocketConsumer" is used by default which will send the messages to Mixpanel using a socket.
+ * You can implement your own custom Consumer to customize how a message is sent to Mixpanel. This can be useful when
+ * you want to put messages onto a distributed queue (such as ActiveMQ or Kestrel) instead of writing to Mixpanel in
+ * the user thread.
+ *
+ * Options
+ * -------------
+ *
+ * <table width="100%" cellpadding="5">
+ *  <tr>
+ *      <th>Option</th>
+ *      <th>Description</th>
+ *      <th>Default</th>
+ *  </tr>
+ *  <tr>
+ *      <td>max_queue_size</td>
+ *      <td>The maximum number of items to buffer in memory before flushing</td>
+ *      <td>1000</td>
+ *  </tr>
+ *  <tr>
+ *      <td>debug</td>
+ *      <td>Enable/disable debug mode</td>
+ *      <td>false</td>
+ *  </tr>
+ *  <tr>
+ *      <td>consumer</td>
+ *      <td>The consumer to use for writing messages</td>
+ *      <td>socket</td>
+ *  </tr>
+ *  <tr>
+ *      <td>consumers</td>
+ *      <td>An array of custom consumers in the format array(consumer_key => class_name)</td>
+ *      <td>null</td>
+ *  </tr>
+ *  <tr>
+ *      <td>host</td>
+ *      <td>The host name for api calls (used by some consumers)</td>
+ *      <td>api.mixpanel.com</td>
+ *  </tr>
+ *  <tr>
+ *      <td>events_endpoint</td>
+ *      <td>The endpoint for tracking events (relative to the host)</td>
+ *      <td>/events</td>
+ *  </tr>
+ *  <tr>
+ *      <td>people_endpoint</td>
+ *      <td>The endpoint for making people updates (relative to the host)</td>
+ *      <td>/engage</td>
+ *  </tr>
+ *  <tr>
+ *      <td>use_ssl</td>
+ *      <td>Tell the consumer whether or not to use ssl (when available)</td>
+ *      <td>true</td>
+ *  </tr>
+ *  <tr>
+ *      <td>error_callback</td>
+ *      <td>The name of a function to be called on consumption failures</td>
+ *      <td>null</td>
+ *  </tr>
+ *
+ * </table>
+ *
+ * Example: Tracking an Event
+ * -------------
+ *
+ * $mp = Mixpanel::getInstance("MY_TOKEN");
+ *
+ * $mp->track("My Event");
+ *
+ * Example: Setting Profile Properties
+ * -------------
+ *
+ * $mp = Mixpanel::getInstance("MY_TOKEN", array("use_ssl" => false));
+ *
+ * $mp->people->set(12345, array(
+ * '$first_name'       => "John",
+ * '$last_name'        => "Doe",
+ * '$email'            => "john.doe@example.com",
+ * '$phone'            => "5555555555",
+ * 'Favorite Color'    => "red"
+ * ));
+ *
+ */
+class Mixpanel extends Base_MixpanelBase {
 
     /**
-     * @var Mixpanel an instance of the Mixpanel class (for singleton use)
+     * An instance of the Mixpanel class (for singleton use)
+     * @var Mixpanel
      */
     private static $_instance;
 
 
     /**
-     * @var MixpanelPeopleProducer
+     * An instance of the MixpanelPeople class (used to create/update profiles)
+     * @var MixpanelPeople
      */
     public $people;
 
 
     /**
-     * @var MixpanelEventsProducer
+     * An instance of the MixpanelEvents class
+     * @var Producers_MixpanelEvents
      */
-    public $_events;
+    private $_events;
 
 
     /**
+     * Instantiates a new Mixpanel instance. Available options/defaults are:
      * @param $token
      * @param array $options
      */
-    public function __construct($token, $options) {
+    public function __construct($token, $options = array()) {
         parent::__construct($options);
-        $this->people = new MixpanelPeopleProducer($token, $options);
-        $this->_events = new MixpanelEventsProducer($token, $options);
+        $this->people = new Producers_MixpanelPeople($token, $options);
+        $this->_events = new Producers_MixpanelEvents($token, $options);
     }
 
 
     /**
+     * Returns a singleton instance of Mixpanel
      * @param $token
      * @param array $options
      * @return Mixpanel
@@ -96,8 +195,10 @@ class Mixpanel extends MixpanelBase {
 
 
     /**
-     * Register a property to be sent with every event. If the property has already been registered, it will be
-     * overwritten.
+     * Register a property to be sent with every event.
+     *
+     * If the property has already been registered, it will be
+     * overwritten. NOTE: Registered properties are only persisted for the life of the Mixpanel class instance.
      * @param string $property
      * @param mixed $value
      */
@@ -108,8 +209,11 @@ class Mixpanel extends MixpanelBase {
 
 
     /**
-     * Register multiple properties to be sent with every event. If any of the properties have already been registered,
-     * they will be overwritten.
+     * Register multiple properties to be sent with every event.
+     *
+     * If any of the properties have already been registered,
+     * they will be overwritten. NOTE: Registered properties are only persisted for the life of the Mixpanel class
+     * instance.
      * @param array $props_and_vals
      */
     public function registerAll($props_and_vals = array())
@@ -119,8 +223,10 @@ class Mixpanel extends MixpanelBase {
 
 
     /**
-     * Register a property to be sent with every event. If the property has already been registered, it will NOT be
-     * overwritten.
+     * Register a property to be sent with every event.
+     *
+     * If the property has already been registered, it will NOT be
+     * overwritten. NOTE: Registered properties are only persisted for the life of the Mixpanel class instance.
      * @param $property
      * @param $value
      */
@@ -131,8 +237,11 @@ class Mixpanel extends MixpanelBase {
 
 
     /**
-     * Register multiple properties to be sent with every event. If any of the properties have already been registered,
-     * they will NOT be overwritten.
+     * Register multiple properties to be sent with every event.
+     *
+     * If any of the properties have already been registered,
+     * they will NOT be overwritten. NOTE: Registered properties are only persisted for the life of the Mixpanel class
+     * instance.
      * @param array $props_and_vals
      */
     public function registerAllOnce($props_and_vals = array())
@@ -173,8 +282,8 @@ class Mixpanel extends MixpanelBase {
 
 
     /**
-     * Alias an existing id with a different unique id. This is helpful when you want to associate a generated id to
-     * a username or e-mail address.
+     * Alias an existing id with a different unique id. This is helpful when you want to associate a generated id
+     * (such as a session id) to a user id or username.
      * @param string|int $original_id
      * @param string|int $new_id
      */

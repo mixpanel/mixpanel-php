@@ -1,9 +1,11 @@
 <?php
 require_once(dirname(__FILE__) . "/MixpanelBaseProducer.php");
-require_once(dirname(__FILE__) . "/MixpanelPeopleProducer.php");
+require_once(dirname(__FILE__) . "/MixpanelPeople.php");
 
-
-class MixpanelEventsProducer extends MixpanelBaseProducer {
+/**
+ * Provides an API to track events on Mixpanel
+ */
+class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
 
     /**
      * An array of properties to attach to every tracked event
@@ -127,6 +129,7 @@ class MixpanelEventsProducer extends MixpanelBaseProducer {
 
 
     /**
+     * Returns the "events" endpoint
      * @return string
      */
     function _getEndpoint() {

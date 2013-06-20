@@ -1,7 +1,10 @@
 <?php
 require_once(dirname(__FILE__) . "/MixpanelBaseProducer.php");
 
-class MixpanelPeopleProducer extends MixpanelBaseProducer {
+/**
+ * Provides an API to create/update profiles on Mixpanel
+ */
+class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
 
     /**
      * Internal method to prepare a message given the message data
@@ -112,6 +115,7 @@ class MixpanelPeopleProducer extends MixpanelBaseProducer {
     }
 
     /**
+     * Returns the "engage" endpoint
      * @return string
      */
     function _getEndpoint() {

@@ -3,14 +3,14 @@
 class MixpanelEventsProducerTest extends PHPUnit_Framework_TestCase {
 
     /**
-     * @var MixpanelEventsProducer
+     * @var Producers_MixpanelEvents
      */
     protected $_instance = null;
 
     protected function setUp()
     {
         parent::setUp();
-        $this->_instance = new MixpanelEventsProducer("token");
+        $this->_instance = new Producers_MixpanelEvents("token");
     }
 
     protected function tearDown()

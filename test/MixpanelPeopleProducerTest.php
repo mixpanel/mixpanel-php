@@ -3,14 +3,14 @@
 class MixpanelPeopleProducerTest extends PHPUnit_Framework_TestCase {
 
     /**
-     * @var MixpanelPeopleProducer
+     * @var Producers_MixpanelPeople
      */
     protected $_instance = null;
 
     protected function setUp()
     {
         parent::setUp();
-        $this->_instance = new MixpanelPeopleProducer("token");
+        $this->_instance = new Producers_MixpanelPeople("token");
     }
 
     protected function tearDown()

@@ -1,12 +1,11 @@
 <?php
 
 /**
- * Class MixpanelBase
- *
- * This a base class which all Mixpanel classes extend from to provide some very basic
+ * This a Base class which all Mixpanel classes extend from to provide some very basic
  * debugging and logging functionality. It also serves to persist $_options across the library.
+ *
  */
-class MixpanelBase {
+class Base_MixpanelBase {
 
 
     /**
@@ -33,6 +32,10 @@ class MixpanelBase {
     protected $_options = array();
 
 
+    /**
+     * Construct a new MixpanelBase object and merge custom options with defaults
+     * @param array $options
+     */
     public function __construct($options = array()) {
         $options = array_merge($this->_defaults, $options);
         $this->_options = $options;

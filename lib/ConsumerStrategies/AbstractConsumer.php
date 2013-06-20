@@ -1,8 +1,15 @@
 <?php
-require_once(dirname(__FILE__) . "/../MixpanelBase.php");
+require_once(dirname(__FILE__) . "/../Base/MixpanelBase.php");
 
-abstract class ConsumerStrategies_AbstractConsumer extends MixpanelBase {
+/**
+ * Provides some base methods for use by a Consumer implementation
+ */
+abstract class ConsumerStrategies_AbstractConsumer extends Base_MixpanelBase {
 
+    /**
+     * Creates a new AbstractConsumer
+     * @param array $options
+     */
     function __construct($options = array()) {
 
         parent::__construct($options);

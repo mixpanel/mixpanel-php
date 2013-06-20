@@ -1,6 +1,9 @@
 <?php
 require_once(dirname(__FILE__) . "/AbstractConsumer.php");
 
+/**
+ * Consumes messages and sends them to a host/endpoint using cURL
+ */
 class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsumer {
 
     /**
@@ -33,6 +36,10 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
     protected $_fork = null;
 
 
+    /**
+     * Creates a new CurlConsumer and assigns properties from the $options array
+     * @param array $options
+     */
     function __construct($options) {
         parent::__construct($options);
 
@@ -45,7 +52,7 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
 
 
     /**
-     * Write to the given host/endpoint using
+     * Write to the given host/endpoint using either a forked cURL process or using PHP's cURL extension
      * @param array $batch
      * @return bool
      */

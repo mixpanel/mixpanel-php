@@ -33,6 +33,9 @@
  */
 require_once(dirname(__FILE__) . "/AbstractConsumer.php");
 
+/**
+ * Consumes messages and writes them to host/endpoint using a persistent socket
+ */
 class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsumer {
 
     /**
@@ -65,6 +68,10 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
     private $_socket;
 
 
+    /**
+     * Creates a new SocketConsumer and assigns properties from the $options array
+     * @param array $options
+     */
     public function __construct($options = array()) {
         parent::__construct($options);
 
@@ -132,6 +139,11 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
         }
     }
 
+    /**
+     * Attempt to open a new socket connection, cache it, and return the resource
+     * @param bool $retry
+     * @return bool|resource
+     */
     private function _createSocket($retry = true) {
         try {
             $socket = pfsockopen($this->_protocol . "://" . $this->_host, $this->_port, $err_no, $err_msg, $this->_timeout);
@@ -155,6 +167,9 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
         }
     }
 
+    /**
+     * Attempt to close and dereference a socket resource
+     */
     private function _destroySocket() {
         $socket = $this->_socket;
         $this->_socket = null;

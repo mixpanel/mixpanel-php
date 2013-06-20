@@ -1,14 +1,17 @@
 <?php
-require_once(dirname(__FILE__) . "/MixpanelBase.php");
-require_once(dirname(__FILE__) . "/ConsumerStrategies/FileConsumer.php");
-require_once(dirname(__FILE__) . "/ConsumerStrategies/CurlConsumer.php");
-require_once(dirname(__FILE__) . "/ConsumerStrategies/SocketConsumer.php");
+require_once(dirname(__FILE__) . "/../Base/MixpanelBase.php");
+require_once(dirname(__FILE__) . "/../ConsumerStrategies/FileConsumer.php");
+require_once(dirname(__FILE__) . "/../ConsumerStrategies/CurlConsumer.php");
+require_once(dirname(__FILE__) . "/../ConsumerStrategies/SocketConsumer.php");
 
 if (!function_exists('json_encode')) {
     throw new Exception('The JSON PHP extension is required.');
 }
 
-abstract class MixpanelBaseProducer extends MixpanelBase {
+/**
+ * Provides some base methods for use by a message Producer
+ */
+abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
 
 
     /**
@@ -45,7 +48,10 @@ abstract class MixpanelBaseProducer extends MixpanelBase {
      */
     protected $_max_queue_size = 1000;
 
+
     /**
+     * Creates a new MixpanelBaseProducer, assings Mixpanel project token, registers custom Consumers, and instantiates
+     * the desired consumer
      * @param $token
      * @param array $options
      */

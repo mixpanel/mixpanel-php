@@ -22,8 +22,7 @@ class MixpanelTest extends PHPUnit_Framework_TestCase {
         $instance = Mixpanel::getInstance("token");
         $this->assertInstanceOf("Mixpanel", $instance);
         $this->assertEquals($this->_instance, $instance);
-        $this->assertInstanceOf("MixpanelPeopleProducer", $this->_instance->people);
-        $this->assertInstanceOf("MixpanelEventsProducer", $this->_instance->_events);
+        $this->assertInstanceOf("Producers_MixpanelPeople", $this->_instance->people);
     }
 
 }
