@@ -247,8 +247,8 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
         }
 
 
-        // only wait for the response in debug mode
-        if ($this->_debug() || $this->_async) {
+        // only wait for the response in debug mode or if we explicitly want to be synchronous
+        if ($this->_debug() || !$this->_async) {
             $res = $this->handleResponse(fread($socket, 2048));
             if ($res["status"] != "200") {
                 $this->_handleError($res["status"], $res["body"]);
@@ -291,7 +291,9 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
         // if the connection has been closed lets kill the socket
         if ($headers['Connection'] == "close") {
             $this->_destroySocket();
-            $this->_log("Server told us connection closed so lets destroy the socket so it'll reconnect on next call");
+            if ($this->_debug()) {
+                $this->_log("Server told us connection closed so lets destroy the socket so it'll reconnect on next call");
+            }
         }
 
         $ret = array(
