@@ -6,7 +6,7 @@ require_once("../lib/Mixpanel.php");
 $mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN");
 
 // associate a user id to subsequent events
-$mp->registerOnce("distinct_id", 12345);
+$mp->identify(12345);
 
 // track a "Login Success" event with a property "Ad Source" having value "Google"
 $mp->track("Login Success", array("Ad Source" => "Google"));
