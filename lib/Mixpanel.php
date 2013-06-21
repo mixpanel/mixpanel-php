@@ -99,12 +99,6 @@ require_once(dirname(__FILE__) . "/Producers/MixpanelEvents.php");
  */
 class Mixpanel extends Base_MixpanelBase {
 
-    /**
-     * An instance of the Mixpanel class (for singleton use)
-     * @var Mixpanel
-     */
-    private static $_instance;
-
 
     /**
      * An instance of the MixpanelPeople class (used to create/update profiles)
@@ -121,7 +115,14 @@ class Mixpanel extends Base_MixpanelBase {
 
 
     /**
-     * Instantiates a new Mixpanel instance. Available options/defaults are:
+     * An instance of the Mixpanel class (for singleton use)
+     * @var Mixpanel
+     */
+    private static $_instance;
+    
+
+    /**
+     * Instantiates a new Mixpanel instance.
      * @param $token
      * @param array $options
      */
