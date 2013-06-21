@@ -1,4 +1,4 @@
-The Official Mixpanel PHP Library
+Mixpanel PHP Library
 ============
 This library provides an API to track events and update profiles on Mixpanel. By default, events are written using ssl over a persistent socket connection. You can contribute your own persistence implementation by creating a Consumer.
 
