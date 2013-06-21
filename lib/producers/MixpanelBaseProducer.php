@@ -120,8 +120,6 @@ abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
                 if ($this->_debug()) {
                     $this->_log("added batch back to queue, queue size is now $queue_size");
                 }
-
-                return false;
             }
 
             $queue_size = count($this->_queue);

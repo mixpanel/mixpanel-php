@@ -67,6 +67,11 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
      */
     private $_socket;
 
+    /**
+     * @var bool whether or not to wait for a response
+     */
+    private $_async;
+
 
     /**
      * Creates a new SocketConsumer and assigns properties from the $options array
@@ -78,7 +83,8 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
 
         $this->_host = $options['host'];
         $this->_endpoint = $options['endpoint'];
-        $this->_timeout = array_key_exists('timeout', $options) ? $options['timeout'] : 100;
+        $this->_timeout = array_key_exists('timeout', $options) ? $options['timeout'] : 1;
+        $this->_async = array_key_exists('async', $options) && $options['async'] === false ? false : true;
 
         if (array_key_exists('use_ssl', $options) && $options['use_ssl'] == true) {
             $this->_protocol = "ssl";
@@ -242,7 +248,7 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
 
 
         // only wait for the response in debug mode
-        if ($this->_debug()) {
+        if ($this->_debug() || $this->_async) {
             $res = $this->handleResponse(fread($socket, 2048));
             if ($res["status"] != "200") {
                 $this->_handleError($res["status"], $res["body"]);
@@ -282,8 +288,6 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
         // extract body
         $body = $lines[count($lines) - 1];
 
-        error_log(print_r($body, true));
-
         // if the connection has been closed lets kill the socket
         if ($headers['Connection'] == "close") {
             $this->_destroySocket();
@@ -294,6 +298,7 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
             "status"  => $status,
             "body" => $body,
         );
+
         return $ret;
     }
 

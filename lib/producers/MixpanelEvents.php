@@ -1,6 +1,7 @@
 <?php
 require_once(dirname(__FILE__) . "/MixpanelBaseProducer.php");
 require_once(dirname(__FILE__) . "/MixpanelPeople.php");
+require_once(dirname(__FILE__) . "/../ConsumerStrategies/SocketConsumer.php");
 
 /**
  * Provides an API to track events on Mixpanel
@@ -11,7 +12,7 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
      * An array of properties to attach to every tracked event
      * @var array
      */
-    private $_super_properties = array();
+    private $_super_properties = array("mp_lib" => "php");
 
 
     /**
@@ -126,14 +127,27 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
     /**
      * Alias an existing id with a different unique id. This is helpful when you want to associate a generated id to
      * a username or e-mail address.
+     *
+     * Because aliasing can be extremely vulnerable to race conditions and ordering issues, we'll make a synchronous
+     * call directly to Mixpanel when this method is called. If it fails we'll throw an Exception as subsequent
+     * events are likely to be incorrectly tracked.
      * @param string|int $original_id
      * @param string|int $new_id
+     * @throws Exception
      */
     public function createAlias($original_id, $new_id) {
-        $this->enqueue(array(
+        $msg = array(
             "event"         => '$create_alias',
             "properties"    =>  array("distinct_id" => $original_id, "alias" => $new_id, "token" => $this->_token)
-        ));
+        );
+
+        $options = array_merge($this->_options, array("endpoint" => $this->_getEndpoint(), "async" => false));
+        $socketConsumer = new ConsumerStrategies_SocketConsumer($options);
+        $success = $socketConsumer->persist(array($msg));
+        if (!$success) {
+            error_log("Creating Mixpanel Alias (original id: $original_id, new id: $new_id) failed");
+            throw new Exception("Tried to create an alias but the call was not successful");
+        }
     }
 
 
