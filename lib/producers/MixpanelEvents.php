@@ -115,6 +115,15 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
 
 
     /**
+     * Identify the user you want to associate to tracked events
+     * @param string|int $user_id
+     */
+    public function identify($user_id) {
+        $this->register("distinct_id", $user_id);
+    }
+
+
+    /**
      * Alias an existing id with a different unique id. This is helpful when you want to associate a generated id to
      * a username or e-mail address.
      * @param string|int $original_id

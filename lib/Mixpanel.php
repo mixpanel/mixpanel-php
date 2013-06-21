@@ -168,8 +168,7 @@ class Mixpanel extends Base_MixpanelBase {
      * Flush the events queue
      * @param int $desired_batch_size
      */
-    public function flush($desired_batch_size = 50)
-    {
+    public function flush($desired_batch_size = 50) {
         $this->_events->flush($desired_batch_size);
     }
 
@@ -177,19 +176,25 @@ class Mixpanel extends Base_MixpanelBase {
     /**
      * Empty the events queue
      */
-    public function reset()
-    {
+    public function reset() {
         $this->_events->reset();
     }
 
+
+    /**
+     * Identify the user you want to associate to tracked events
+     * @param string|int $user_id
+     */
+    public function identify($user_id) {
+        $this->_events->identify($user_id);
+    }
 
     /**
      * Track an event defined by $event associated with metadata defined by $properties
      * @param string $event
      * @param array $properties
      */
-    public function track($event, $properties = array())
-    {
+    public function track($event, $properties = array()) {
         $this->_events->track($event, $properties);
     }
 
@@ -202,8 +207,7 @@ class Mixpanel extends Base_MixpanelBase {
      * @param string $property
      * @param mixed $value
      */
-    public function register($property, $value)
-    {
+    public function register($property, $value) {
         $this->_events->register($property, $value);
     }
 
@@ -216,8 +220,7 @@ class Mixpanel extends Base_MixpanelBase {
      * instance.
      * @param array $props_and_vals
      */
-    public function registerAll($props_and_vals = array())
-    {
+    public function registerAll($props_and_vals = array()) {
         $this->_events->registerAll($props_and_vals);
     }
 
@@ -230,8 +233,7 @@ class Mixpanel extends Base_MixpanelBase {
      * @param $property
      * @param $value
      */
-    public function registerOnce($property, $value)
-    {
+    public function registerOnce($property, $value) {
         $this->_events->registerOnce($property, $value);
     }
 
@@ -244,8 +246,7 @@ class Mixpanel extends Base_MixpanelBase {
      * instance.
      * @param array $props_and_vals
      */
-    public function registerAllOnce($props_and_vals = array())
-    {
+    public function registerAllOnce($props_and_vals = array()) {
         $this->_events->registerAllOnce($props_and_vals);
     }
 
@@ -254,8 +255,7 @@ class Mixpanel extends Base_MixpanelBase {
      * Un-register an property to be sent with every event.
      * @param string $property
      */
-    public function unregister($property)
-    {
+    public function unregister($property) {
         $this->_events->unregister($property);
     }
 
@@ -264,8 +264,7 @@ class Mixpanel extends Base_MixpanelBase {
      * Un-register a list of properties to be sent with every event.
      * @param array $properties
      */
-    public function unregisterAll($properties)
-    {
+    public function unregisterAll($properties) {
         $this->_events->unregisterAll($properties);
     }
 
@@ -287,8 +286,7 @@ class Mixpanel extends Base_MixpanelBase {
      * @param string|int $original_id
      * @param string|int $new_id
      */
-    public function createAlias($original_id, $new_id)
-    {
+    public function createAlias($original_id, $new_id) {
         $this->_events->createAlias($original_id, $new_id);
     }
 }
