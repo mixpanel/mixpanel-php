@@ -9,7 +9,7 @@ Add mixpanel/mixpanel-php as a dependency and run composer update
 ```json
 "require": {
     ...
-    "mixpanel/mixpanel-php" : "*"
+    "mixpanel/mixpanel-php" : "1.*"
     ...
 }
 ```
