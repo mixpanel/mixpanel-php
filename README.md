@@ -76,6 +76,6 @@ Changelog
 -------------
 Version 2.0:
  * Changed the default consumer to be 'curl' (CurlConsumer)
- * Changed the default setting of 'fork' to false in the Curl Consumer. in NON forked mode. This means that by default, events and profile updates are sent synchronously using the PHP cURL lib when using the Curl Consumer.
+ * Changed the default setting of 'fork' to false in the Curl Consumer. This means that by default, events and profile updates are sent synchronously using the PHP cURL lib when using the Curl Consumer.
  * Fixed bug where max_queue_size was never read
  
