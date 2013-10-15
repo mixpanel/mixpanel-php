@@ -9,7 +9,7 @@ Add mixpanel/mixpanel-php as a dependency and run composer update
 ```json
 "require": {
     ...
-    "mixpanel/mixpanel-php" : "1.*"
+    "mixpanel/mixpanel-php" : "2.*"
     ...
 }
 ```
@@ -72,3 +72,10 @@ Documentation
 
 For further examples and options checkout out the "examples" folder
 
+Changelog
+-------------
+Version 2.0:
+ * Changed the default consumer to be 'curl' (CurlConsumer)
+ * Changed the default setting of 'fork' to false in the Curl Consumer. in NON forked mode. This means that by default, events and profile updates are sent synchronously using the PHP cURL lib when using the Curl Consumer.
+ * Fixed bug where max_queue_size was never read
+ 
