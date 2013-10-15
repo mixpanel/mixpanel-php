@@ -31,7 +31,7 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
 
 
     /**
-     * @var bool|null true to fork the cURL process or false to use PHP's cURL extension
+     * @var bool|null true to fork the cURL process (using exec) or false to use PHP's cURL extension. false by default
      */
     protected $_fork = null;
 
@@ -39,6 +39,7 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
     /**
      * Creates a new CurlConsumer and assigns properties from the $options array
      * @param array $options
+     * @throws Exception
      */
     function __construct($options) {
         parent::__construct($options);
@@ -47,7 +48,24 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
         $this->_endpoint = $options['endpoint'];
         $this->_timeout = array_key_exists('timeout', $options) ? $options['timeout'] : 1;
         $this->_protocol = array_key_exists('use_ssl', $options) && $options['use_ssl'] == true ? "https" : "http";
-        $this->_fork = array_key_exists('fork', $options) ? ($options['fork'] !== false) : true;
+        $this->_fork = array_key_exists('fork', $options) ? ($options['fork'] == true) : false;
+
+        // ensure the environment is workable for the given settings
+        if ($this->_fork == true) {
+            $exists = function_exists('exec');
+            if (!$exists) {
+                throw new Exception('The "exec" function must exist to use the cURL consumer in "fork" mode. Try setting fork = false or use another consumer.');
+            }
+            $disabled = explode(', ', ini_get('disable_functions'));
+            $enabled = !in_array('exec', $disabled);
+            if (!$enabled) {
+                throw new Exception('The "exec" function must be enabled to use the cURL consumer in "fork" mode. Try setting fork = false or use another consumer.');
+            }
+        } else {
+            if (!function_exists('curl_init')) {
+                throw new Exception('The cURL PHP extension is required to use the cURL consumer with fork = false. Try setting fork = true or use another consumer.');
+            }
+        }
     }
 
 
@@ -76,14 +94,8 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
      * @param $url
      * @param $data
      * @return bool
-     * @throws Exception
      */
     protected function _execute($url, $data) {
-
-        if (!function_exists('curl_init')) {
-            throw new Exception('The cURL PHP extension is required.');
-        }
-
         if ($this->_debug()) {
             $this->_log("Making blocking cURL call to $url");
         }
