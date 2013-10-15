@@ -77,5 +77,6 @@ Changelog
 Version 2.0:
  * Changed the default consumer to be 'curl' (CurlConsumer)
  * Changed the default setting of 'fork' to false in the Curl Consumer. This means that by default, events and profile updates are sent synchronously using the PHP cURL lib when using the Curl Consumer.
+ * 'createAlias' uses the CurlConsumer with 'fork' explicitly set to false (as we need this to be synchronous) instead of the SocketConsumer. 
  * Fixed bug where max_queue_size was never read
  
