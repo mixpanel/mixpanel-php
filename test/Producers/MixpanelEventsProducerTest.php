@@ -78,11 +78,9 @@ class MixpanelEventsProducerTest extends PHPUnit_Framework_TestCase {
     public function testCreateAlias() {
         $original_id = 1;
         $new_id = 2;
-        $this->_instance->createAlias($original_id, $new_id);
-        $queue = $this->_instance->getQueue();
-        $lastEvent = $queue[count($queue)-1];
-        $this->assertEquals('$create_alias', $lastEvent['event']);
-        $this->assertEquals($original_id, $lastEvent['properties']['distinct_id']);
-        $this->assertEquals($new_id, $lastEvent['properties']['alias']);
+        $msg = $this->_instance->createAlias($original_id, $new_id);
+        $this->assertEquals('$create_alias', $msg['event']);
+        $this->assertEquals($original_id, $msg['properties']['distinct_id']);
+        $this->assertEquals($new_id, $msg['properties']['alias']);
     }
 }

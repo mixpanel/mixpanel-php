@@ -16,7 +16,7 @@ class Base_MixpanelBase {
         "max_batch_size"    => 50, // the max batch size Mixpanel will accept is 50,
         "max_queue_size"    => 1000, // the max num of items to hold in memory before flushing
         "debug"             => false, // enable/disable debug mode
-        "consumer"          => "socket", // which consumer to use
+        "consumer"          => "curl", // which consumer to use
         "host"              => "api.mixpanel.com", // the host name for api calls
         "events_endpoint"   => "/track", // host relative endpoint for events
         "people_endpoint"   => "/engage", // host relative endpoint for people updates

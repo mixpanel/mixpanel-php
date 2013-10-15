@@ -64,6 +64,11 @@ abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
             $this->_consumers = array_merge($this->_consumers, $options['consumers']);
         }
 
+        // set max queue size
+        if (array_key_exists("max_queue_size", $options)) {
+            $this->_max_queue_size = $options['max_queue_size'];
+        }
+
         // associate token
         $this->_token = $token;
 
@@ -127,7 +132,6 @@ abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
             if ($this->_debug()) {
                 $this->_log("Batch of $batch_size consumed, queue size is now $queue_size");
             }
-
         }
         return $succeeded;
     }

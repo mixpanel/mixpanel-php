@@ -25,7 +25,7 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
 
 
     /**
-     * @var string the protocol to use for the socket connection
+     * @var string the protocol to use for the cURL connection
      */
     protected $_protocol;
 

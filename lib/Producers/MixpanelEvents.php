@@ -1,7 +1,7 @@
 <?php
 require_once(dirname(__FILE__) . "/MixpanelBaseProducer.php");
 require_once(dirname(__FILE__) . "/MixpanelPeople.php");
-require_once(dirname(__FILE__) . "/../ConsumerStrategies/SocketConsumer.php");
+require_once(dirname(__FILE__) . "/../ConsumerStrategies/CurlConsumer.php");
 
 /**
  * Provides an API to track events on Mixpanel
@@ -133,6 +133,7 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
      * events are likely to be incorrectly tracked.
      * @param string|int $original_id
      * @param string|int $new_id
+     * @return array $msg
      * @throws Exception
      */
     public function createAlias($original_id, $new_id) {
@@ -141,12 +142,14 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
             "properties"    =>  array("distinct_id" => $original_id, "alias" => $new_id, "token" => $this->_token)
         );
 
-        $options = array_merge($this->_options, array("endpoint" => $this->_getEndpoint(), "async" => false));
-        $socketConsumer = new ConsumerStrategies_SocketConsumer($options);
-        $success = $socketConsumer->persist(array($msg));
+        $options = array_merge($this->_options, array("endpoint" => $this->_getEndpoint(), "fork" => false));
+        $curlConsumer = new ConsumerStrategies_CurlConsumer($options);
+        $success = $curlConsumer->persist(array($msg));
         if (!$success) {
             error_log("Creating Mixpanel Alias (original id: $original_id, new id: $new_id) failed");
             throw new Exception("Tried to create an alias but the call was not successful");
+        } else {
+            return $msg;
         }
     }
 

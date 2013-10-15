@@ -64,6 +64,17 @@ class MixpanelBaseProducerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals($event1, $queue[0]);
         $this->assertEquals($event2, $queue[1]);
     }
+
+    public function testSetMaxQueueSize() {
+        $this->_instance->enqueue(array("event" => "test"));
+        $queue = $this->_instance->getQueue();
+        $this->assertEquals(1, count($queue));
+        $this->_instance->flush();
+        $new_instance = new Producers_MixpanelEvents("token", array('max_queue_size' => 0));
+        $new_instance->enqueue(array("event" => "test"));
+        $queue = $new_instance->getQueue();
+        $this->assertEquals(0, count($queue));
+    }
 }
 
 class _Producers_MixpanelBaseProducer extends Producers_MixpanelBaseProducer {
