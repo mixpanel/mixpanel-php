@@ -74,6 +74,12 @@ For further examples and options checkout out the "examples" folder
 
 Changelog
 -------------
+Version 2.4:
+ * Fixed a bug where passing the integer 0 for the `ip` parameter would be ignored
+
+Version 2.1 - 2.3:
+ * Broken releases
+
 Version 2.0:
  * Changed the default consumer to be 'curl' (CurlConsumer)
  * Changed the default setting of 'fork' to false in the Curl Consumer. This means that by default, events and profile updates are sent synchronously using the PHP cURL lib when using the Curl Consumer.
