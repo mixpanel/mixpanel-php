@@ -50,7 +50,8 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
 
     /**
      * Unset properties on a user record. If the profile does not exist, it creates it with no properties.
-     * If it does exist, it unsets these properties.
+     * If it does exist, it unsets these properties. NOTE: In other libraries we use 'unset' which is
+     * a reserved word in PHP.
      * @param string|int $distinct_id the distinct_id or alias of a user
      * @param array $props associative array of properties to unset on the profile
      * @param string|null $ip the ip address of the client (used for geo-location)
