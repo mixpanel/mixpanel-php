@@ -74,6 +74,9 @@ For further examples and options checkout out the "examples" folder
 
 Changelog
 -------------
+Version 2.6:
+ * Updated default for `connect_timeout` in SocketConsumer to be 5
+
 Version 2.5:
  * `timeout` option now refers to `CURLOPT_TIMEOUT` instead of `CURLOPT_CONNECTTIMEOUT` in non-forked cURL calls, it has been removed from the SocketConsumer in favor of a new `connect_timeout` option.
  * Added a new `connect_timeout` option for CURLOPT_CONNECTTIMEOUT in non-forked cURL calls (CurlConsumer) and the socket timeout (SocketConsumer)
