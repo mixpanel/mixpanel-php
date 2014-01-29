@@ -74,6 +74,9 @@ For further examples and options checkout out the "examples" folder
 
 Changelog
 -------------
+Version 2.6.1:
+ * Fixed bug in SocketConsumer timeout
+
 Version 2.6:
  * Updated default for `connect_timeout` in SocketConsumer to be 5
 
