@@ -30,7 +30,6 @@ class ConsumerStrategies_CurlConsumerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals(1, $consumer->blockingCalls);
     }
 
-
     public function testForked() {
         $consumer = new CurlConsumer(array(
             "host"      => "localhost",
@@ -43,6 +42,31 @@ class ConsumerStrategies_CurlConsumerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals(1, $consumer->forkedCalls);
     }
 
+    public function testExecuteCurlFailure() {
+        $error_handler = new ErrorHandler();
+        $consumer = new ConsumerStrategies_CurlConsumer(array(
+            "host"      => "some.domain.that.should.not.ever.exist.tld",
+            "endpoint"  => "/endpoint",
+            "timeout"   => 2,
+            "use_ssl"   => false,
+            "fork"      => false,
+            "error_callback"    => array($error_handler, 'handle_error')
+        ));
+        $resp = $consumer->persist(array("msg"));
+        $this->assertFalse($resp);
+        $this->assertEquals($error_handler->last_code, CURLE_COULDNT_RESOLVE_HOST);
+    }
+
+}
+
+class ErrorHandler {
+    public $last_code = -1;
+    public $last_msg = "";
+
+    public function handle_error($code, $msg) {
+        $this->last_code = $code;
+        $this->last_msg = $msg;
+    }
 }
 
 class CurlConsumer extends ConsumerStrategies_CurlConsumer {
@@ -101,6 +125,5 @@ class CurlConsumer extends ConsumerStrategies_CurlConsumer {
         $this->forkedCalls++;
         return parent::_execute_forked($url, $data);
     }
-
 
 }

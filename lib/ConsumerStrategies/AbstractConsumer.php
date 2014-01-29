@@ -37,7 +37,7 @@ abstract class ConsumerStrategies_AbstractConsumer extends Base_MixpanelBase {
     protected function _handleError($code, $msg) {
         if (isset($this->_options['error_callback'])) {
             $handler = $this->_options['error_callback'];
-            $handler($code, $msg);
+            call_user_func($handler, $code, $msg);
         }
 
         if ($this->_debug()) {

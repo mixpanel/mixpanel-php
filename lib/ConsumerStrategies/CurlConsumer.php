@@ -19,7 +19,13 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
 
 
     /**
-     * @var int timeout the socket connection timeout in seconds
+     * @var int timeout The number of seconds to wait while trying to connect. Default is 5 seconds.
+     */
+    protected $_connect_timeout;
+
+
+    /**
+     * @var int timeout The maximum number of seconds to allow cURL call to execute. Default is 30 seconds.
      */
     protected $_timeout;
 
@@ -46,7 +52,8 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
 
         $this->_host = $options['host'];
         $this->_endpoint = $options['endpoint'];
-        $this->_timeout = array_key_exists('timeout', $options) ? $options['timeout'] : 1;
+        $this->_connect_timeout = array_key_exists('connect_timeout', $options) ? $options['connect_timeout'] : 5;
+        $this->_timeout = array_key_exists('timeout', $options) ? $options['timeout'] : 30;
         $this->_protocol = array_key_exists('use_ssl', $options) && $options['use_ssl'] == true ? "https" : "http";
         $this->_fork = array_key_exists('fork', $options) ? ($options['fork'] == true) : false;
 
@@ -103,17 +110,26 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->_timeout);
-        curl_setopt($ch,CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->_connect_timeout);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $this->_timeout);
+        curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch,CURLOPT_POSTFIELDS, $data);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
         $response = curl_exec($ch);
-        curl_close($ch);
-        if (trim($response) == "1") {
-            return true;
-        } else {
-            $this->_handleError(0, $response);
+        if (false === $response) {
+            $curl_error = curl_error($ch);
+            $curl_errno = curl_errno($ch);
+            curl_close($ch);
+            $this->_handleError($curl_errno, $curl_error);
             return false;
+        } else {
+            curl_close($ch);
+            if (trim($response) == "1") {
+                return true;
+            } else {
+                $this->_handleError(0, $response);
+                return false;
+            }
         }
     }
 
