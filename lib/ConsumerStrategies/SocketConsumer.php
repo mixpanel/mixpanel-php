@@ -152,7 +152,7 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
      */
     private function _createSocket($retry = true) {
         try {
-            $socket = pfsockopen($this->_protocol . "://" . $this->_host, $this->_port, $err_no, $err_msg, $this->_timeout);
+            $socket = pfsockopen($this->_protocol . "://" . $this->_host, $this->_port, $err_no, $err_msg, $this->_connect_timeout);
 
             if ($this->_debug()) {
                 $this->_log("Opening socket connection to " . $this->_protocol . "://" . $this->_host . ":" . $this->_port);
