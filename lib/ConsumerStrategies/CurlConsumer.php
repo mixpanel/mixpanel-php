@@ -35,6 +35,11 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
      */
     protected $_fork = null;
 
+    /**
+     * @var string|null additional verification for endpoint /import
+     */
+    protected $_api_key;
+
 
     /**
      * Creates a new CurlConsumer and assigns properties from the $options array
@@ -49,6 +54,7 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
         $this->_timeout = array_key_exists('timeout', $options) ? $options['timeout'] : 1;
         $this->_protocol = array_key_exists('use_ssl', $options) && $options['use_ssl'] == true ? "https" : "http";
         $this->_fork = array_key_exists('fork', $options) ? ($options['fork'] == true) : false;
+        $this->_api_key = array_key_exists('api_key', $options) ? $options['api_key'] : null;
 
         // ensure the environment is workable for the given settings
         if ($this->_fork == true) {
@@ -98,6 +104,10 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
     protected function _execute($url, $data) {
         if ($this->_debug()) {
             $this->_log("Making blocking cURL call to $url");
+        }
+
+        if(!is_null($this->_api_key)){
+            $data .= '&api_key='.$this->_api_key;
         }
 
         $ch = curl_init();
