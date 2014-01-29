@@ -108,6 +108,13 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch,CURLOPT_POSTFIELDS, $data);
         $response = curl_exec($ch);
+        if (false===$response) {
+            $curl_error=curl_error($ch);
+            $curl_errno=curl_errno($ch);
+            curl_close($ch);
+            $this->_handleError($curl_errno, $curl_error);
+            return false;
+        }
         curl_close($ch);
         if (trim($response) == "1") {
             return true;
