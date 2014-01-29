@@ -1,6 +1,6 @@
 Mixpanel PHP Library
 ============
-This library provides an API to track events and update profiles on Mixpanel. By default, events are written using ssl over a persistent socket connection. You can contribute your own persistence implementation by creating a Consumer.
+This library provides an API to track events and update profiles on Mixpanel.
 
 Install with Composer
 ------------
@@ -64,6 +64,10 @@ $mp->people->set(12345, array(
     "Favorite Color"    => "red"
 ));
 ```
+
+Production Notes
+-------------
+By default, data is sent using ssl over cURL. This works fine when you're tracking a small number of events or aren't concerned with the potentially blocking nature of the PHP cURL calls. However, this isn't very efficient when you're sending hundreds of events (such as in batch processing). Our library comes packaged with an easy way to use a persistent socket connection for much more efficient writes. To enable the persistent socket, simply pass `'consumer' => 'socket'` as an entry in the `$options` array when you instantiate the Mixpanel class. Additionally, you can contribute your own persistence implementation by creating a custom Consumer.
 
 Documentation
 -------------
