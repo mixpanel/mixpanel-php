@@ -75,8 +75,8 @@ For further examples and options checkout out the "examples" folder
 Changelog
 -------------
 Version 2.5:
- * `timeout` option now refers to `CURLOPT_TIMEOUT` instead of `CURLOPT_CONNECTTIMEOUT` in non-forked cURL calls
- * Added new `connect_timeout` option for CURLOPT_CONNECTTIMEOUT in non-forked cURL calls
+ * `timeout` option now refers to `CURLOPT_TIMEOUT` instead of `CURLOPT_CONNECTTIMEOUT` in non-forked cURL calls, it has been removed from the SocketConsumer in favor of a new `connect_timeout` option.
+ * Added a new `connect_timeout` option for CURLOPT_CONNECTTIMEOUT in non-forked cURL calls (CurlConsumer) and the socket timeout (SocketConsumer)
  * Set default timeout (CURLOPT_TIMEOUT) to 30 seconds in non-forked cURL calls
  * Set default connection timeoute (CURLOPT_CONNECTTIMEOUT) to 5 seconds in non-forked cURL calls
  * We now pass cURL errors from non-forked cURL calls to `_handle_error` with the curl errno and message

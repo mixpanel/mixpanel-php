@@ -19,7 +19,7 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
 
 
     /**
-     * @var int timeout The number of seconds to wait while trying to connect. Default is 5 seconds.
+     * @var int connect_timeout The number of seconds to wait while trying to connect. Default is 5 seconds.
      */
     protected $_connect_timeout;
 
@@ -160,4 +160,62 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
 
         return $return_var == 0;
     }
+
+    /**
+     * @return int
+     */
+    public function getConnectTimeout()
+    {
+        return $this->_connect_timeout;
+    }
+
+    /**
+     * @return string
+     */
+    public function getEndpoint()
+    {
+        return $this->_endpoint;
+    }
+
+    /**
+     * @return bool|null
+     */
+    public function getFork()
+    {
+        return $this->_fork;
+    }
+
+    /**
+     * @return string
+     */
+    public function getHost()
+    {
+        return $this->_host;
+    }
+
+    /**
+     * @return array
+     */
+    public function getOptions()
+    {
+        return $this->_options;
+    }
+
+    /**
+     * @return string
+     */
+    public function getProtocol()
+    {
+        return $this->_protocol;
+    }
+
+    /**
+     * @return int
+     */
+    public function getTimeout()
+    {
+        return $this->_timeout;
+    }
+
+
 }

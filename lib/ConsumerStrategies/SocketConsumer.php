@@ -51,9 +51,9 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
 
 
     /**
-     * @var int timeout the socket connection timeout in seconds
+     * @var int connect_timeout the socket connection timeout in seconds
      */
-    private $_timeout;
+    private $_connect_timeout;
 
 
     /**
@@ -83,7 +83,7 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
 
         $this->_host = $options['host'];
         $this->_endpoint = $options['endpoint'];
-        $this->_timeout = array_key_exists('timeout', $options) ? $options['timeout'] : 1;
+        $this->_connect_timeout = array_key_exists('connect_timeout', $options) ? $options['connect_timeout'] : 1;
         $this->_async = array_key_exists('async', $options) && $options['async'] === false ? false : true;
 
         if (array_key_exists('use_ssl', $options) && $options['use_ssl'] == true) {

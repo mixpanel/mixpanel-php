@@ -73,7 +73,16 @@ require_once(dirname(__FILE__) . "/Producers/MixpanelEvents.php");
  *      <td>The name of a function to be called on consumption failures</td>
  *      <td>null</td>
  *  </tr>
- *
+ *  <tr>
+ *      <td>connect_timeout</td>
+ *      <td>In both the SocketConsumer and CurlConsumer, this is used for the connection timeout (i.e. How long it has take to actually make a connection).
+ *      <td>5</td>
+ *  </tr>
+ *  <tr>
+ *      <td>timeout</td>
+ *      <td>In the CurlConsumer (non-forked), it is used to determine how long the cURL call has to execute.
+ *      <td>30</td>
+ *  </tr>
  * </table>
  *
  * Example: Tracking an Event

@@ -59,7 +59,7 @@ abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
 
         parent::__construct($options);
 
-        // add additional consumer
+        // register any customer consumers
         if (array_key_exists("consumers", $options)) {
             $this->_consumers = array_merge($this->_consumers, $options['consumers']);
         }

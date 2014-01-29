@@ -57,6 +57,26 @@ class ConsumerStrategies_CurlConsumerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals($error_handler->last_code, CURLE_COULDNT_RESOLVE_HOST);
     }
 
+    public function testOptions() {
+        function callback() { }
+
+        $consumer = new ConsumerStrategies_CurlConsumer(array(
+            "host"      => "localhost",
+            "endpoint"  => "/endpoint",
+            "timeout"   => 2,
+            "connect_timeout" => 1,
+            "use_ssl"   => true,
+            "fork"      => false,
+            "error_callback"    => 'callback'
+        ));
+
+        $this->assertEquals($consumer->getHost(), "localhost");
+        $this->assertEquals($consumer->getEndpoint(), "/endpoint");
+        $this->assertEquals($consumer->getTimeout(), 2);
+        $this->assertEquals($consumer->getConnectTimeout(), 1);
+        $this->assertEquals($consumer->getProtocol(), "https");
+    }
+
 }
 
 class ErrorHandler {
