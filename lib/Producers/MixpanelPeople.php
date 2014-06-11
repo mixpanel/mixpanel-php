@@ -14,13 +14,14 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      * @param null $ip
      * @return array
      */
-    private function _constructPayload($distinct_id, $operation, $value, $ip = null) {
+    private function _constructPayload($distinct_id, $operation, $value, $ip = null, $ignore_time = false) {
         $payload = array(
             '$token' => $this->_token,
             '$distinct_id' => $distinct_id,
             $operation => $value
         );
         if ($ip !== null) $payload['$ip'] = $ip;
+        if ($ignore_time === true) $payload['$ignore_time'] = true;
         return $payload;
     }
 
@@ -30,9 +31,10 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      * @param string|int $distinct_id the distinct_id or alias of a user
      * @param array $props associative array of properties to set on the profile
      * @param string|null $ip the ip address of the client (used for geo-location)
+     * @param boolean $ignore_time If the $ignore_time property is true, Mixpanel will not automatically update the "Last Seen" property of the profile. Otherwise, Mixpanel will add a "Last Seen" property associated with the current time
      */
-    public function set($distinct_id, $props, $ip = null) {
-        $payload = $this->_constructPayload($distinct_id, '$set', $props, $ip);
+    public function set($distinct_id, $props, $ip = null, $ignore_time = false) {
+        $payload = $this->_constructPayload($distinct_id, '$set', $props, $ip, $ignore_time);
         $this->enqueue($payload);
     }
 
@@ -42,9 +44,10 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      * @param string|int $distinct_id the distinct_id or alias of a user
      * @param array $props associative array of properties to set on the profile
      * @param string|null $ip the ip address of the client (used for geo-location)
+     * @param boolean $ignore_time If the $ignore_time property is true, Mixpanel will not automatically update the "Last Seen" property of the profile. Otherwise, Mixpanel will add a "Last Seen" property associated with the current time
      */
-    public function setOnce($distinct_id, $props, $ip = null) {
-        $payload = $this->_constructPayload($distinct_id, '$set_once', $props, $ip);
+    public function setOnce($distinct_id, $props, $ip = null, $ignore_time = false) {
+        $payload = $this->_constructPayload($distinct_id, '$set_once', $props, $ip, $ignore_time);
         $this->enqueue($payload);
     }
 
@@ -55,9 +58,10 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      * @param string|int $distinct_id the distinct_id or alias of a user
      * @param array $props associative array of properties to unset on the profile
      * @param string|null $ip the ip address of the client (used for geo-location)
+     * @param boolean $ignore_time If the $ignore_time property is true, Mixpanel will not automatically update the "Last Seen" property of the profile. Otherwise, Mixpanel will add a "Last Seen" property associated with the current time
      */
-    public function remove($distinct_id, $props, $ip = null) {
-        $payload = $this->_constructPayload($distinct_id, '$unset', $props, $ip);
+    public function remove($distinct_id, $props, $ip = null, $ignore_time = false) {
+        $payload = $this->_constructPayload($distinct_id, '$unset', $props, $ip, $ignore_time);
         $this->enqueue($payload);
     }
 
@@ -68,9 +72,10 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      * @param $prop string the property to increment
      * @param int $val the amount to increment the property by
      * @param string|null $ip the ip address of the client (used for geo-location)
+     * @param boolean $ignore_time If the $ignore_time property is true, Mixpanel will not automatically update the "Last Seen" property of the profile. Otherwise, Mixpanel will add a "Last Seen" property associated with the current time
      */
-    public function increment($distinct_id, $prop, $val, $ip = null) {
-        $payload = $this->_constructPayload($distinct_id, '$add', array("$prop" => $val), $ip);
+    public function increment($distinct_id, $prop, $val, $ip = null, $ignore_time = false) {
+        $payload = $this->_constructPayload($distinct_id, '$add', array("$prop" => $val), $ip, $ignore_time);
         $this->enqueue($payload);
     }
 
@@ -81,10 +86,11 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      * @param string $prop the property that holds the list
      * @param string|array $val items to add to the list
      * @param string|null $ip the ip address of the client (used for geo-location)
+     * @param boolean $ignore_time If the $ignore_time property is true, Mixpanel will not automatically update the "Last Seen" property of the profile. Otherwise, Mixpanel will add a "Last Seen" property associated with the current time
      */
-    public function append($distinct_id, $prop, $val, $ip = null) {
+    public function append($distinct_id, $prop, $val, $ip = null, $ignore_time = false) {
         $operation = gettype($val) == "array" ? '$union' : '$append';
-        $payload = $this->_constructPayload($distinct_id, $operation, array("$prop" => $val), $ip);
+        $payload = $this->_constructPayload($distinct_id, $operation, array("$prop" => $val), $ip, $ignore_time);
         $this->enqueue($payload);
     }
 
@@ -94,8 +100,9 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      * @param string $amount the transaction amount e.g. "20.50"
      * @param null $timestamp the timestamp of when the transaction occurred (default to current timestamp)
      * @param string|null $ip the ip address of the client (used for geo-location)
+     * @param boolean $ignore_time If the $ignore_time property is true, Mixpanel will not automatically update the "Last Seen" property of the profile. Otherwise, Mixpanel will add a "Last Seen" property associated with the current time
      */
-    public function trackCharge($distinct_id, $amount, $timestamp = null, $ip = null) {
+    public function trackCharge($distinct_id, $amount, $timestamp = null, $ip = null, $ignore_time = false) {
         $timestamp = $timestamp == null ? time() : $timestamp;
         $date_iso = date("c", $timestamp);
         $transaction = array(
@@ -103,7 +110,7 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
             '$amount' => $amount
         );
         $val = array('$transactions' => $transaction);
-        $payload = $this->_constructPayload($distinct_id, '$append', $val, $ip);
+        $payload = $this->_constructPayload($distinct_id, '$append', $val, $ip, $ignore_time);
         $this->enqueue($payload);
     }
 
@@ -111,9 +118,10 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      * Clear all transactions stored on a user's profile
      * @param string|int $distinct_id the distinct_id or alias of a user
      * @param string|null $ip the ip address of the client (used for geo-location)
+     * @param boolean $ignore_time If the $ignore_time property is true, Mixpanel will not automatically update the "Last Seen" property of the profile. Otherwise, Mixpanel will add a "Last Seen" property associated with the current time
      */
-    public function clearCharges($distinct_id, $ip = null) {
-        $payload = $this->_constructPayload($distinct_id, '$set', array('$transactions' => array()), $ip);
+    public function clearCharges($distinct_id, $ip = null, $ignore_time = false) {
+        $payload = $this->_constructPayload($distinct_id, '$set', array('$transactions' => array()), $ip, $ignore_time);
         $this->enqueue($payload);
     }
 
@@ -121,9 +129,10 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      * Delete this profile from Mixpanel
      * @param string|int $distinct_id the distinct_id or alias of a user
      * @param string|null $ip the ip address of the client (used for geo-location)
+     * @param boolean $ignore_time If the $ignore_time property is true, Mixpanel will not automatically update the "Last Seen" property of the profile. Otherwise, Mixpanel will add a "Last Seen" property associated with the current time
      */
-    public function deleteUser($distinct_id, $ip = null) {
-        $payload = $this->_constructPayload($distinct_id, '$delete', "", $ip);
+    public function deleteUser($distinct_id, $ip = null, $ignore_time = false) {
+        $payload = $this->_constructPayload($distinct_id, '$delete', "", $ip, $ignore_time);
         $this->enqueue($payload);
     }
 
