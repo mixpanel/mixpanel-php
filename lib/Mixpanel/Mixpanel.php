@@ -1,8 +1,10 @@
 <?php
 
-require_once(dirname(__FILE__) . "/Base/MixpanelBase.php");
-require_once(dirname(__FILE__) . "/Producers/MixpanelPeople.php");
-require_once(dirname(__FILE__) . "/Producers/MixpanelEvents.php");
+namespace Mixpanel;
+
+use Mixpanel\Base\Mixpanel as MixpanelBase;
+use Mixpanel\Producer\People;
+use Mixpanel\Producer\Events;
 
 /**
  * This is the main class for the Mixpanel PHP Library which provides all of the methods you need to track events and
@@ -106,28 +108,21 @@ require_once(dirname(__FILE__) . "/Producers/MixpanelEvents.php");
  * ));
  *
  */
-class Mixpanel extends Base_MixpanelBase {
+class Mixpanel extends MixpanelBase {
 
 
     /**
      * An instance of the MixpanelPeople class (used to create/update profiles)
-     * @var MixpanelPeople
+     * @var \Mixpanel\Producer\People
      */
-    public $people;
+    private $_people;
 
 
     /**
      * An instance of the MixpanelEvents class
-     * @var Producers_MixpanelEvents
+     * @var \Mixpanel\Producer\Events
      */
     private $_events;
-
-
-    /**
-     * An instance of the Mixpanel class (for singleton use)
-     * @var Mixpanel
-     */
-    private static $_instance;
     
 
     /**
@@ -135,24 +130,45 @@ class Mixpanel extends Base_MixpanelBase {
      * @param $token
      * @param array $options
      */
-    public function __construct($token, $options = array()) {
+    public function __construct($token, $options = array(), People $people, Events $events)
+    {
         parent::__construct($options);
-        $this->people = new Producers_MixpanelPeople($token, $options);
-        $this->_events = new Producers_MixpanelEvents($token, $options);
+        $this->setPeople($people);
+        $this->setEvents($events);
     }
 
+    /**
+     * Sets the people property.
+     * @param \Mixpanel\Producer\People $people
+     */
+    public function setPeople(People $people)
+    {
+        $this->_people = $people;
+    }
 
     /**
-     * Returns a singleton instance of Mixpanel
-     * @param $token
-     * @param array $options
-     * @return Mixpanel
+     * Returns the people property.
      */
-    public static function getInstance($token, $options = array()) {
-        if(!isset(self::$_instance)) {
-            self::$_instance = new Mixpanel($token, $options);
-        }
-        return self::$_instance;
+    public function getPeople()
+    {
+        return $this->_people;
+    }
+
+    /**
+     * Sets the events property.
+     * @param \Mixpanel\Producer\Events $events
+     */
+    public function setEvents(Events $events)
+    {
+        $this->_events = $events;
+    }
+
+    /**
+     * Returns the events property.
+     */
+    public function getEvents()
+    {
+        return $this->_events;
     }
 
 

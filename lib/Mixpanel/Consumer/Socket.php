@@ -1,4 +1,9 @@
 <?php
+
+namespace Mixpanel\Consumer;
+
+use Mixpanel\Consumer\AbstractConsumer as AbstractConsumer;
+
 /**
  * Portions of this class were borrowed from
  * https://github.com/segmentio/analytics-php/blob/master/lib/Analytics/Consumer/Socket.php.
@@ -31,12 +36,11 @@
  * OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-require_once(dirname(__FILE__) . "/AbstractConsumer.php");
 
 /**
  * Consumes messages and writes them to host/endpoint using a persistent socket
  */
-class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsumer {
+class Socket extends AbstractConsumer {
 
     /**
      * @var string the host to connect to (e.g. api.mixpanel.com)

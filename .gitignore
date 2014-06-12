@@ -2,3 +2,5 @@
 *.lock
 *.idea
 vendor
+.vagrant
+Vagrantfile

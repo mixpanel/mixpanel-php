@@ -1,10 +1,12 @@
 <?php
-require_once(dirname(__FILE__) . "/AbstractConsumer.php");
+namespace Mixpanel\Consumer;
+
+use Mixpanel\Consumer\AbstractConsumer as AbstractConsumer;
 
 /**
  * Consumes messages and sends them to a host/endpoint using cURL
  */
-class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsumer {
+class Curl extends AbstractConsumer {
 
     /**
      * @var string the host to connect to (e.g. api.mixpanel.com)
