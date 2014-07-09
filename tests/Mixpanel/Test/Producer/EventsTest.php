@@ -1,6 +1,10 @@
 <?php
 
-class MixpanelEventsProducerTest extends PHPUnit_Framework_TestCase {
+namespace Mixpanel\Test\Producer\Events;
+
+use Mixpanel\Producer\Events;
+
+class EventsTest extends \PHPUnit_Framework_TestCase {
 
     /**
      * @var Producers_MixpanelEvents
@@ -10,7 +14,7 @@ class MixpanelEventsProducerTest extends PHPUnit_Framework_TestCase {
     protected function setUp()
     {
         parent::setUp();
-        $this->_instance = new Producers_MixpanelEvents("token");
+        $this->_instance = new Events("token");
     }
 
     protected function tearDown()

@@ -1,11 +1,14 @@
 <?php
-require_once("../lib/Mixpanel.php"); // import the Mixpanel class
+//Use the Mixpanel Factory class
+use Mixpanel\Factory\MixpanelFactory;
 
-$mp = new Mixpanel("MIXPANEL_PROJECT_TOKEN", array(
+// Get a Mixpanel instance
+$factory = new MixpanelFactory("MIXPANEL_PROJECT_TOKEN", array(
     "debug"             => true,
     "consumer"          => "socket",
     "use_ssl"           => false
 ));
+$mp = $factory->get();
 
 $mp->track("test_event", array("color" => "blue"));
 $mp->track("test_event", array("color" => "red"));

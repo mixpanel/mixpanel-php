@@ -1,10 +1,13 @@
 <?php
-require_once(dirname(__FILE__) . "/MixpanelBaseProducer.php");
+
+namespace Mixpanel\Producer;
+
+use Mixpanel\Producer\AbstractProducer as AbstractProducer;
 
 /**
  * Provides an API to create/update profiles on Mixpanel
  */
-class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
+class People extends AbstractProducer {
 
     /**
      * Internal method to prepare a message given the message data
@@ -18,10 +21,10 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
         $payload = array(
             '$token' => $this->_token,
             '$distinct_id' => $distinct_id,
+            '$ignore_time' => $ignore_time,
             $operation => $value
         );
         if ($ip !== null) $payload['$ip'] = $ip;
-        if ($ignore_time === true) $payload['$ignore_time'] = true;
         return $payload;
     }
 

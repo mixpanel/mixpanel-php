@@ -1,8 +1,11 @@
 <?php
-require_once(dirname(__FILE__) . "/../Base/MixpanelBase.php");
-require_once(dirname(__FILE__) . "/../ConsumerStrategies/FileConsumer.php");
-require_once(dirname(__FILE__) . "/../ConsumerStrategies/CurlConsumer.php");
-require_once(dirname(__FILE__) . "/../ConsumerStrategies/SocketConsumer.php");
+
+namespace Mixpanel\Producer;
+
+use Mixpanel\Base\Mixpanel as MixpanelBase;
+use Mixpanel\Consumer\File as FileConsumer;
+use Mixpanel\Consumer\Curl as CurlConsumer;
+use Mixpanel\Consumer\Socket as SocketConsumer;
 
 if (!function_exists('json_encode')) {
     throw new Exception('The JSON PHP extension is required.');
@@ -11,7 +14,7 @@ if (!function_exists('json_encode')) {
 /**
  * Provides some base methods for use by a message Producer
  */
-abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
+abstract class AbstractProducer extends MixpanelBase {
 
 
     /**
@@ -27,7 +30,7 @@ abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
 
 
     /**
-     * @var ConsumerStrategies_AbstractConsumer the consumer to use when flushing messages
+     * @var \Mixpanel\Consumer\AbstractConsumer the consumer to use when flushing messages
      */
     private $_consumer = null;
 
@@ -36,9 +39,9 @@ abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
      * @var array The list of available consumers
      */
     private $_consumers = array(
-        "file"      =>  "ConsumerStrategies_FileConsumer",
-        "curl"      =>  "ConsumerStrategies_CurlConsumer",
-        "socket"    =>  "ConsumerStrategies_SocketConsumer"
+        "file"      =>  'Mixpanel\Consumer\File',
+        "curl"      =>  'Mixpanel\Consumer\Curl',
+        "socket"    =>  'Mixpanel\Consumer\Socket'
     );
 
 
@@ -50,7 +53,7 @@ abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
 
 
     /**
-     * Creates a new MixpanelBaseProducer, assings Mixpanel project token, registers custom Consumers, and instantiates
+     * Creates a new Mixpanel\Producer\AbstractProducer, assings Mixpanel project token, registers custom Consumers, and instantiates
      * the desired consumer
      * @param $token
      * @param array $options
@@ -164,7 +167,7 @@ abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
 
     /**
      * Given a strategy type, return a new PersistenceStrategy object
-     * @return ConsumerStrategies_AbstractConsumer
+     * @return \Mixpanel\Consumer\AbstractConsumer
      */
     protected function _getConsumer() {
         $key = $this->_options['consumer'];

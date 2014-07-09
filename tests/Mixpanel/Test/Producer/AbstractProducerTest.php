@@ -1,16 +1,21 @@
 <?php
 
-class MixpanelBaseProducerTest extends PHPUnit_Framework_TestCase {
+namespace Mixpanel\Test\Base;
+
+use Mixpanel\Producer\AbstractProducer;
+use Mixpanel\Producer\Events;
+
+class AbstractProducerTest extends \PHPUnit_Framework_TestCase {
 
     /**
-     * @var _Producers_MixpanelBaseProducer
+     * @var __MixpanelBaseProducer
      */
     protected $_instance = null;
     protected $_file = null;
     protected function setUp() {
         parent::setUp();
         $this->_file = dirname(__FILE__)."/output-".time().".txt";
-        $this->_instance = new _Producers_MixpanelBaseProducer("token", array("consumer" => "file", "debug" => true, "file" => $this->_file));
+        $this->_instance = new __MixpanelBaseProducer("token", array("consumer" => "file", "debug" => true, "file" => $this->_file));
     }
 
     protected function tearDown() {
@@ -68,7 +73,7 @@ class MixpanelBaseProducerTest extends PHPUnit_Framework_TestCase {
         $queue = $this->_instance->getQueue();
         $this->assertEquals(1, count($queue));
         $this->_instance->flush();
-        $new_instance = new Producers_MixpanelEvents("token", array('max_queue_size' => 0));
+        $new_instance = new Events("token", array('max_queue_size' => 0));
         $new_instance->track("test");
         $queue = $new_instance->getQueue();
         $this->assertEquals(0, count($queue));
@@ -76,7 +81,7 @@ class MixpanelBaseProducerTest extends PHPUnit_Framework_TestCase {
 }
 
 // stub for tests
-class _Producers_MixpanelBaseProducer extends Producers_MixpanelBaseProducer {
+class __MixpanelBaseProducer extends AbstractProducer {
     function _getEndpoint() {
     }
 }

@@ -1,9 +1,13 @@
 <?php
-require_once("/path/to/vendor/mixpanel/mixpanel-php/lib/Mixpanel.php"); // import the Mixpanel class
 
-$mp = new Mixpanel("MIXPANEL_PROJECT_TOKEN", array(
+//Use the Mixpanel Factory class
+use Mixpanel\Factory\MixpanelFactory;
+
+// Get a Mixpanel instance
+$factory = new MixpanelFactory("MIXPANEL_PROJECT_TOKEN", array(
     "debug"             => true,
 ));
+$mp = $factory->get();
 
 // this would likely come from a database or session variable
 $user_id = 12345;
@@ -50,7 +54,7 @@ $mp->people->append($user_id, "favorites", "Apples");
 $mp->people->append($user_id, "favorites", array("Baseball", "Reading"));
 
 // track a purchase or charge of $9.99 for user 12345 where the transaction happened just now
-$mp->people->trackCharge($user_id, "9.99");
+$mp->getPeople()->trackCharge($user_id, "9.99");
 
 // track a purchase or charge of $20 for user 12345 where the transaction happened on June 01, 2013 at 5pm EST
 $mp->people->trackCharge($user_id, "20.00", strtotime("01 Jun 2013 5:00:00 PM EST"));

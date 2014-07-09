@@ -1,9 +1,10 @@
 <?php
-// import the Mixpanel class
-require_once("../lib/Mixpanel.php");
+//Use the Mixpanel Factory class
+use Mixpanel\Factory\MixpanelFactory;
 
-// instantiate the Mixpanel class
-$mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN");
+// Get a Mixpanel instance
+$factory = new MixpanelFactory("MIXPANEL_PROJECT_TOKEN");
+$mp = $factory->get();
 
 // create or update a profile with First Name, Last Name, E-Mail Address, Phone Number, and Favorite Color
 $mp->people->set(12345, array(

@@ -1,10 +1,13 @@
 <?php
-require_once(dirname(__FILE__) . "/../Base/MixpanelBase.php");
+
+namespace Mixpanel\Consumer;
+
+use Mixpanel\Base\Mixpanel as MixpanelBase;
 
 /**
  * Provides some base methods for use by a Consumer implementation
  */
-abstract class ConsumerStrategies_AbstractConsumer extends Base_MixpanelBase {
+abstract class AbstractConsumer extends MixpanelBase {
 
     /**
      * Creates a new AbstractConsumer

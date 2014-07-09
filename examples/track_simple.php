@@ -1,4 +1,9 @@
 <?php
-require_once("../lib/Mixpanel.php"); // import the Mixpanel class
-$mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN"); // instantiate the Mixpanel class
+//Use the Mixpanel Factory class
+use Mixpanel\Factory\MixpanelFactory;
+
+// Get a Mixpanel instance
+$factory = new MixpanelFactory("MIXPANEL_PROJECT_TOKEN");
+$mp = $factory->get();
+
 $mp->track("login_clicked"); // track an event

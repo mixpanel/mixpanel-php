@@ -18,11 +18,12 @@ Now you can start tracking events and people:
 
 ```php
 <?php
-// import dependencies
-require 'vendor/autoload.php';
 
-// get the Mixpanel class instance, replace with your project token
-$mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN");
+use Mixpanel\Factory\MixpanelFactory;
+
+// get the Mixpanel class instance from the Mixpanel factory, replace with your project token
+$factory = new MixpanelFactory("MIXPANEL_PROJECT_TOKEN");
+$mp = $factory->get();
 
 // track an event
 $mp->track("button clicked", array("label" => "sign-up")); 
@@ -46,11 +47,12 @@ Install Manually
 
 ```php
 <?php
-// import Mixpanel
-require 'mixpanel-php/lib/Mixpanel.php';
 
-// get the Mixpanel class instance, replace with your project token
-$mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN");
+use Mixpanel\Factory\MixpanelFactory;
+
+// get the Mixpanel class instance from the Mixpanel factory, replace with your project token
+$factory = new MixpanelFactory("MIXPANEL_PROJECT_TOKEN");
+$mp = $factory->get();
 
 // track an event
 $mp->track("button clicked", array("label" => "sign-up"));

@@ -1,9 +1,13 @@
 <?php
 
-class ConsumerStrategies_CurlConsumerTest extends PHPUnit_Framework_TestCase {
+namespace Mixpanel\Test\Consumner;
+
+use Mixpanel\Consumer\Curl as CurlConsumer;
+
+class CurlTest extends \PHPUnit_Framework_TestCase {
 
     public function testSettings() {
-        $consumer = new CurlConsumer(array(
+        $consumer = new _CurlConsumer(array(
             "host"      => "localhost",
             "endpoint"  => "/endpoint",
             "timeout"   => 2,
@@ -19,7 +23,7 @@ class ConsumerStrategies_CurlConsumerTest extends PHPUnit_Framework_TestCase {
     }
 
     public function testBlocking() {
-        $consumer = new CurlConsumer(array(
+        $consumer = new _CurlConsumer(array(
             "host"      => "localhost",
             "endpoint"  => "/endpoint",
             "timeout"   => 2,
@@ -31,7 +35,7 @@ class ConsumerStrategies_CurlConsumerTest extends PHPUnit_Framework_TestCase {
     }
 
     public function testForked() {
-        $consumer = new CurlConsumer(array(
+        $consumer = new _CurlConsumer(array(
             "host"      => "localhost",
             "endpoint"  => "/endpoint",
             "timeout"   => 2,
@@ -44,7 +48,7 @@ class ConsumerStrategies_CurlConsumerTest extends PHPUnit_Framework_TestCase {
 
     public function testExecuteCurlFailure() {
         $error_handler = new ErrorHandler();
-        $consumer = new ConsumerStrategies_CurlConsumer(array(
+        $consumer = new CurlConsumer(array(
             "host"      => "some.domain.that.should.not.ever.exist.tld",
             "endpoint"  => "/endpoint",
             "timeout"   => 2,
@@ -60,7 +64,7 @@ class ConsumerStrategies_CurlConsumerTest extends PHPUnit_Framework_TestCase {
     public function testOptions() {
         function callback() { }
 
-        $consumer = new ConsumerStrategies_CurlConsumer(array(
+        $consumer = new CurlConsumer(array(
             "host"      => "localhost",
             "endpoint"  => "/endpoint",
             "timeout"   => 2,
@@ -89,7 +93,7 @@ class ErrorHandler {
     }
 }
 
-class CurlConsumer extends ConsumerStrategies_CurlConsumer {
+class _CurlConsumer extends CurlConsumer {
 
     public $forkedCalls = 0;
     public $blockingCalls = 0;

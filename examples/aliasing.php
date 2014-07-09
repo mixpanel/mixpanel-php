@@ -1,9 +1,10 @@
 <?php
-// import the Mixpanel class
-require_once("../lib/Mixpanel.php");
+//Use the Mixpanel Factory class
+use Mixpanel\Factory\MixpanelFactory;
 
-// instantiate the Mixpanel class
-$mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN");
+// Get a Mixpanel instance
+$factory = new MixpanelFactory("MIXPANEL_PROJECT_TOKEN");
+$mp = $factory->get();
 
 // create an alias for user id 12345 (note that this is a synchronous call)
 $mp->createAlias(12345, "john.doe@example.com");

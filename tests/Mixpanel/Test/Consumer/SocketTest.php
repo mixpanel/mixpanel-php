@@ -1,16 +1,20 @@
 <?php
 
-class ConsumerStrategies_SocketConsumerTest extends PHPUnit_Framework_TestCase {
+namespace Mixpanel\Test\Consumer;
+
+use Mixpanel\Consumer\Socket;
+
+class SocketTest extends \PHPUnit_Framework_TestCase {
 
     /**
-     * @var ConsumerStrategies_SocketConsumer
+     * @var \Mixpanel\Consumer\Socket
      */
     protected $_instance = null;
     protected $_file = null;
     protected function setUp()
     {
         parent::setUp();
-        $this->_instance = new ConsumerStrategies_SocketConsumer(array(
+        $this->_instance = new Socket(array(
             "host"      => "localhost",
             "endpoint"  => "/endpoint",
             "timeout"   => 2,
