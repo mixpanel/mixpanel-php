@@ -78,6 +78,10 @@ For further examples and options checkout out the "examples" folder
 
 Changelog
 -------------
+Version 2.6.2:
+ * Added support for $ignore_time
+ * Cleaned up some comments to be more clear
+
 Version 2.6.1:
  * Fixed bug in SocketConsumer timeout
 

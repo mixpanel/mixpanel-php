@@ -34,8 +34,6 @@ class MixpanelPeopleProducerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals("John", $msg['$set']['name']);
     }
 
-
-
     public function testSetIgnoreTime() {
         $this->_instance->set(12345, array("name" => "John"), "192.168.0.1", true);
         $queue = $this->_instance->getQueue();
@@ -102,8 +100,6 @@ class MixpanelPeopleProducerTest extends PHPUnit_Framework_TestCase {
         $this->assertArrayHasKey("actions", $msg['$union']);
         $this->assertEquals(array("Logged In", "Logged Out"), $msg['$union']['actions']);
     }
-
-
 
     public function testTrackCharge() {
         date_default_timezone_set("America/Los_Angeles");
