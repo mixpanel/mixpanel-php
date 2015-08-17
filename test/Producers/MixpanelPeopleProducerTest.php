@@ -28,7 +28,7 @@ class MixpanelPeopleProducerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals(12345, $msg['$distinct_id']);
         $this->assertEquals("token", $msg['$token']);
         $this->assertEquals("192.168.0.1", $msg['$ip']);
-        $this->assertEquals(false, $msg['$ignore_time']);
+        $this->assertArrayNotHasKey('$ignore_time', $msg);
         $this->assertArrayHasKey('$set', $msg);
         $this->assertArrayHasKey("name", $msg['$set']);
         $this->assertEquals("John", $msg['$set']['name']);
