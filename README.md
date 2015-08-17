@@ -1,4 +1,4 @@
-Mixpanel PHP Library
+Mixpanel PHP Library [![Build Status](https://travis-ci.org/mixpanel/mixpanel-php.svg)](https://travis-ci.org/mixpanel/mixpanel-php)
 ============
 This library provides an API to track events and update profiles on Mixpanel.
 
