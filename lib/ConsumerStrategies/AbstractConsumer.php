@@ -52,7 +52,7 @@ abstract class ConsumerStrategies_AbstractConsumer extends Base_MixpanelBase {
      * Number of requests/batches that will be processed in parallel.
      * @return int
      */
-    public function getNumParallelRequests() {
+    public function getNumThreads() {
         return 1;
     }
 
