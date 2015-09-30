@@ -107,12 +107,14 @@ abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
     public function flush($desired_batch_size = 50) {
         $queue_size = count($this->_queue);
         $succeeded = true;
+        $num_threads = $this->_consumer->getNumThreads();
+
         if ($this->_debug()) {
             $this->_log("Flush called - queue size: ".$queue_size);
         }
 
         while($queue_size > 0 && $succeeded) {
-            $batch_size = min(array($queue_size, $desired_batch_size, $this->_options['max_batch_size']));
+            $batch_size = min(array($queue_size, $desired_batch_size*$num_threads, $this->_options['max_batch_size']*$num_threads));
             $batch = array_splice($this->_queue, 0, $batch_size);
             $succeeded = $this->_persist($batch);
 

@@ -49,6 +49,14 @@ abstract class ConsumerStrategies_AbstractConsumer extends Base_MixpanelBase {
     }
 
     /**
+     * Number of requests/batches that will be processed in parallel.
+     * @return int
+     */
+    public function getNumParallelRequests() {
+        return 1;
+    }
+
+    /**
      * Persist a batch of messages in whatever way the implementer sees fit
      * @param array $batch an array of messages to consume
      * @return boolean success or fail

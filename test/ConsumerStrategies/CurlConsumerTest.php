@@ -67,6 +67,7 @@ class ConsumerStrategies_CurlConsumerTest extends PHPUnit_Framework_TestCase {
             "connect_timeout" => 1,
             "use_ssl"   => true,
             "fork"      => false,
+            "num_threads"      => 5,
             "error_callback"    => 'callback'
         ));
 
@@ -75,6 +76,7 @@ class ConsumerStrategies_CurlConsumerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals($consumer->getTimeout(), 2);
         $this->assertEquals($consumer->getConnectTimeout(), 1);
         $this->assertEquals($consumer->getProtocol(), "https");
+        $this->assertEquals($consumer->getNumThreads(), 5);
     }
 
 }
