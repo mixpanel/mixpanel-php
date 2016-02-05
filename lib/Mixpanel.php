@@ -124,10 +124,10 @@ class Mixpanel extends Base_MixpanelBase {
 
 
     /**
-     * An instance of the Mixpanel class (for singleton use)
-     * @var Mixpanel
+     * Instances' list of the Mixpanel class (for singleton use, splitted by token)
+     * @var Mixpanel[]
      */
-    private static $_instance;
+    private static $_instances = array();
     
 
     /**
@@ -149,10 +149,10 @@ class Mixpanel extends Base_MixpanelBase {
      * @return Mixpanel
      */
     public static function getInstance($token, $options = array()) {
-        if(!isset(self::$_instance)) {
-            self::$_instance = new Mixpanel($token, $options);
+        if(!isset(self::$_instances[$token])) {
+            self::$_instances[$token] = new Mixpanel($token, $options);
         }
-        return self::$_instance;
+        return self::$_instances[$token];
     }
 
 
