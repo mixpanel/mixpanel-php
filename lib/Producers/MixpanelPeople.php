@@ -1,17 +1,19 @@
 <?php
-require_once(dirname(__FILE__) . "/MixpanelBaseProducer.php");
+
+namespace Mixpanel\Producers;
 
 /**
  * Provides an API to create/update profiles on Mixpanel
  */
-class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
+class MixpanelPeople extends MixpanelBaseProducer {
 
     /**
      * Internal method to prepare a message given the message data
      * @param $distinct_id
      * @param $operation
      * @param $value
-     * @param null $ip
+     * @param string $ip
+     * @param bool $ignore_time
      * @return array
      */
     private function _constructPayload($distinct_id, $operation, $value, $ip = null, $ignore_time = false) {

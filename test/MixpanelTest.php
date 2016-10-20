@@ -1,6 +1,10 @@
 <?php
 
-class MixpanelTest extends PHPUnit_Framework_TestCase {
+namespace Mixpanel\Test;
+
+use Mixpanel\Mixpanel;
+
+class MixpanelTest extends \PHPUnit_Framework_TestCase {
 
     /**
      * @var Mixpanel
@@ -22,7 +26,7 @@ class MixpanelTest extends PHPUnit_Framework_TestCase {
         $instance = Mixpanel::getInstance("token");
         $this->assertInstanceOf("Mixpanel", $instance);
         $this->assertEquals($this->_instance, $instance);
-        $this->assertInstanceOf("Producers_MixpanelPeople", $this->_instance->people);
+        $this->assertInstanceOf("Mixpanel\\Producers\\MixpanelPeople", $this->_instance->people);
     }
 
 }

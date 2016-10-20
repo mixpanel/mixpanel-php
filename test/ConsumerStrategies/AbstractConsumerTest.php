@@ -1,6 +1,10 @@
 <?php
 
-class ConsumerStrategies_AbstractConsumerTest extends PHPUnit_Framework_TestCase {
+namespace Mixpanel\Test\ConsumerStrategies;
+
+use Mixpanel\ConsumerStrategies;
+
+class AbstractConsumerTest extends \PHPUnit_Framework_TestCase {
 
     /**
      * @var AbstractConsumer
@@ -26,7 +30,7 @@ class ConsumerStrategies_AbstractConsumerTest extends PHPUnit_Framework_TestCase
 
 }
 
-class AbstractConsumer extends ConsumerStrategies_AbstractConsumer {
+class AbstractConsumer extends ConsumerStrategies\AbstractConsumer {
     /**
      * Persist a batch of messages in whatever way the implementer sees fit
      * @param array $batch an array of messages to consume

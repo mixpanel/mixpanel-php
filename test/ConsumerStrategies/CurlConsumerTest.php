@@ -1,6 +1,10 @@
 <?php
 
-class ConsumerStrategies_CurlConsumerTest extends PHPUnit_Framework_TestCase {
+namespace Mixpanel\Test\ConsumerStrategies;
+
+use Mixpanel\ConsumerStrategies;
+
+class CurlConsumerTest extends \PHPUnit_Framework_TestCase {
 
     public function testSettings() {
         $consumer = new CurlConsumer(array(
@@ -44,7 +48,7 @@ class ConsumerStrategies_CurlConsumerTest extends PHPUnit_Framework_TestCase {
 
     public function testExecuteCurlFailure() {
         $error_handler = new ErrorHandler();
-        $consumer = new ConsumerStrategies_CurlConsumer(array(
+        $consumer = new ConsumerStrategies\CurlConsumer(array(
             "host"      => "some.domain.that.should.not.ever.exist.tld",
             "endpoint"  => "/endpoint",
             "timeout"   => 2,
@@ -60,7 +64,7 @@ class ConsumerStrategies_CurlConsumerTest extends PHPUnit_Framework_TestCase {
     public function testOptions() {
         function callback() { }
 
-        $consumer = new ConsumerStrategies_CurlConsumer(array(
+        $consumer = new ConsumerStrategies\CurlConsumer(array(
             "host"      => "localhost",
             "endpoint"  => "/endpoint",
             "timeout"   => 2,
@@ -89,7 +93,7 @@ class ErrorHandler {
     }
 }
 
-class CurlConsumer extends ConsumerStrategies_CurlConsumer {
+class CurlConsumer extends ConsumerStrategies\CurlConsumer {
 
     public $forkedCalls = 0;
     public $blockingCalls = 0;

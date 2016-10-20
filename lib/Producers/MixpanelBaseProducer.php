@@ -1,17 +1,14 @@
 <?php
-require_once(dirname(__FILE__) . "/../Base/MixpanelBase.php");
-require_once(dirname(__FILE__) . "/../ConsumerStrategies/FileConsumer.php");
-require_once(dirname(__FILE__) . "/../ConsumerStrategies/CurlConsumer.php");
-require_once(dirname(__FILE__) . "/../ConsumerStrategies/SocketConsumer.php");
 
-if (!function_exists('json_encode')) {
-    throw new Exception('The JSON PHP extension is required.');
-}
+namespace Mixpanel\Producers;
+
+use Mixpanel\Base\MixpanelBase;
+use Mixpanel\ConsumerStrategies;
 
 /**
  * Provides some base methods for use by a message Producer
  */
-abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
+abstract class MixpanelBaseProducer extends MixpanelBase {
 
 
     /**
@@ -27,7 +24,7 @@ abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
 
 
     /**
-     * @var ConsumerStrategies_AbstractConsumer the consumer to use when flushing messages
+     * @var ConsumerStrategies\AbstractConsumer the consumer to use when flushing messages
      */
     private $_consumer = null;
 
@@ -36,9 +33,9 @@ abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
      * @var array The list of available consumers
      */
     private $_consumers = array(
-        "file"      =>  "ConsumerStrategies_FileConsumer",
-        "curl"      =>  "ConsumerStrategies_CurlConsumer",
-        "socket"    =>  "ConsumerStrategies_SocketConsumer"
+        "file"      =>  "Mixpanel\\ConsumerStrategies\\FileConsumer",
+        "curl"      =>  "Mixpanel\\ConsumerStrategies\\CurlConsumer",
+        "socket"    =>  "Mixpanel\\ConsumerStrategies\\SocketConsumer"
     );
 
 
@@ -164,7 +161,7 @@ abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
 
     /**
      * Given a strategy type, return a new PersistenceStrategy object
-     * @return ConsumerStrategies_AbstractConsumer
+     * @return ConsumerStrategies\AbstractConsumer
      */
     protected function _getConsumer() {
         $key = $this->_options['consumer'];

@@ -1,6 +1,12 @@
 <?php
-require_once("../lib/Mixpanel.php"); // import the Mixpanel class
-require_once("consumers/ObConsumer.php"); // import the Mixpanel class
+
+use Mixpanel\Mixpanel;
+
+// import the autoloader
+require_once __DIR__ . "/../vendor/autoload.php";
+
+// import the custom consumer
+require_once __DIR__ . "/consumers/ObConsumer.php";
 
 // define a callback function to handle errors made in a consumer
 function handleError($code, $data) {

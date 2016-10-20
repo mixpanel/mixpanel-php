@@ -1,6 +1,10 @@
 <?php
 
-class ConsumerStrategies_FileConsumerTest extends PHPUnit_Framework_TestCase {
+namespace Mixpanel\Test\ConsumerStrategies;
+
+use Mixpanel\ConsumerStrategies;
+
+class FileConsumerTest extends \PHPUnit_Framework_TestCase {
 
     /**
      * @var ConsumerStrategies_FileConsumer
@@ -11,7 +15,7 @@ class ConsumerStrategies_FileConsumerTest extends PHPUnit_Framework_TestCase {
     {
         parent::setUp();
         $this->_file = dirname(__FILE__)."/output-".time().".txt";
-        $this->_instance = new ConsumerStrategies_FileConsumer(array("file" => $this->_file));
+        $this->_instance = new ConsumerStrategies\FileConsumer(array("file" => $this->_file));
     }
 
     protected function tearDown()

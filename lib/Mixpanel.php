@@ -1,8 +1,6 @@
 <?php
 
-require_once(dirname(__FILE__) . "/Base/MixpanelBase.php");
-require_once(dirname(__FILE__) . "/Producers/MixpanelPeople.php");
-require_once(dirname(__FILE__) . "/Producers/MixpanelEvents.php");
+namespace Mixpanel;
 
 /**
  * This is the main class for the Mixpanel PHP Library which provides all of the methods you need to track events and
@@ -106,19 +104,19 @@ require_once(dirname(__FILE__) . "/Producers/MixpanelEvents.php");
  * ));
  *
  */
-class Mixpanel extends Base_MixpanelBase {
+class Mixpanel extends Base\MixpanelBase {
 
 
     /**
      * An instance of the MixpanelPeople class (used to create/update profiles)
-     * @var MixpanelPeople
+     * @var Producers\MixpanelPeople
      */
     public $people;
 
 
     /**
      * An instance of the MixpanelEvents class
-     * @var Producers_MixpanelEvents
+     * @var Producers\MixpanelEvents
      */
     private $_events;
 
@@ -137,8 +135,8 @@ class Mixpanel extends Base_MixpanelBase {
      */
     public function __construct($token, $options = array()) {
         parent::__construct($options);
-        $this->people = new Producers_MixpanelPeople($token, $options);
-        $this->_events = new Producers_MixpanelEvents($token, $options);
+        $this->people = new Producers\MixpanelPeople($token, $options);
+        $this->_events = new Producers\MixpanelEvents($token, $options);
     }
 
 
@@ -150,7 +148,7 @@ class Mixpanel extends Base_MixpanelBase {
      */
     public static function getInstance($token, $options = array()) {
         if(!isset(self::$_instance)) {
-            self::$_instance = new Mixpanel($token, $options);
+            self::$_instance = new self($token, $options);
         }
         return self::$_instance;
     }

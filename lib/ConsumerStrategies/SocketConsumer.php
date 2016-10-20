@@ -31,12 +31,15 @@
  * OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-require_once(dirname(__FILE__) . "/AbstractConsumer.php");
+
+namespace Mixpanel\ConsumerStrategies;
+
+use Mixpanel\Exception;
 
 /**
  * Consumes messages and writes them to host/endpoint using a persistent socket
  */
-class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsumer {
+class SocketConsumer extends AbstractConsumer {
 
     /**
      * @var string the host to connect to (e.g. api.mixpanel.com)
@@ -55,6 +58,10 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
      */
     private $_connect_timeout;
 
+    /**
+     * @var int
+     */
+    private $_port;
 
     /**
      * @var string the protocol to use for the socket connection
