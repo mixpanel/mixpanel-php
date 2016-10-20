@@ -16,4 +16,4 @@ install:
   - phpenv rehash
 
 script:
-  - ./vendor/bin/phpunit --coverage-text
+  - make coverage
