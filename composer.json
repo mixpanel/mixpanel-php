@@ -14,13 +14,16 @@
         }
     ],
     "require": {
-        "php": ">=5.0"
+        "php": ">=5.3"
     },
     "require-dev": {
         "phpunit/phpunit": "4.7.*",
         "phpdocumentor/phpdocumentor": "2.*"
     },
     "autoload": {
-        "files": ["lib/Mixpanel.php"]
+        "psr-4": {
+            "Mixpanel\\": "lib"
+        },
+        "files": ["lib/compat.php"]
     }
 }

@@ -1,6 +1,10 @@
 <?php
 
-class MixpanelPeopleProducerTest extends PHPUnit_Framework_TestCase {
+namespace Mixpanel\Test\Producers;
+
+use Mixpanel\Producers;
+
+class MixpanelPeopleProducerTest extends \PHPUnit_Framework_TestCase {
 
     /**
      * @var Producers_MixpanelPeople
@@ -10,7 +14,7 @@ class MixpanelPeopleProducerTest extends PHPUnit_Framework_TestCase {
     protected function setUp()
     {
         parent::setUp();
-        $this->_instance = new Producers_MixpanelPeople("token");
+        $this->_instance = new Producers\MixpanelPeople("token");
     }
 
     protected function tearDown()

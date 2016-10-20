@@ -1,6 +1,10 @@
 <?php
 
-class MixpanelBaseProducerTest extends PHPUnit_Framework_TestCase {
+namespace Mixpanel\Test\Base;
+
+use Mixpanel\Producers;
+
+class MixpanelBaseProducerTest extends \PHPUnit_Framework_TestCase {
 
     /**
      * @var _Producers_MixpanelBaseProducer
@@ -68,7 +72,7 @@ class MixpanelBaseProducerTest extends PHPUnit_Framework_TestCase {
         $queue = $this->_instance->getQueue();
         $this->assertEquals(1, count($queue));
         $this->_instance->flush();
-        $new_instance = new Producers_MixpanelEvents("token", array('max_queue_size' => 0));
+        $new_instance = new Producers\MixpanelEvents("token", array('max_queue_size' => 0));
         $new_instance->track("test");
         $queue = $new_instance->getQueue();
         $this->assertEquals(0, count($queue));
@@ -76,7 +80,7 @@ class MixpanelBaseProducerTest extends PHPUnit_Framework_TestCase {
 }
 
 // stub for tests
-class _Producers_MixpanelBaseProducer extends Producers_MixpanelBaseProducer {
+class _Producers_MixpanelBaseProducer extends Producers\MixpanelBaseProducer {
     function _getEndpoint() {
     }
 }

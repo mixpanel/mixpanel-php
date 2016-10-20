@@ -1,9 +1,11 @@
 <?php
-require_once(dirname(__FILE__) . "/AbstractConsumer.php");
+
+namespace Mixpanel\ConsumerStrategies;
+
 /**
  * Consumes messages and writes them to a file
  */
-class ConsumerStrategies_FileConsumer extends ConsumerStrategies_AbstractConsumer {
+class FileConsumer extends AbstractConsumer {
 
     /**
      * @var string path to a file that we want to write the messages to

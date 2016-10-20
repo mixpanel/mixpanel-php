@@ -1,4 +1,12 @@
 <?php
-require_once("../lib/Mixpanel.php"); // import the Mixpanel class
-$mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN"); // instantiate the Mixpanel class
-$mp->track("login_clicked"); // track an event
+
+use Mixpanel\Mixpanel;
+
+// import the autoloader
+require_once __DIR__ . "/../vendor/autoload.php";
+
+// instantiate the Mixpanel class
+$mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN");
+
+// track an event
+$mp->track("login_clicked");

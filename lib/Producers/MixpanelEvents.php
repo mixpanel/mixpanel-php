@@ -1,12 +1,14 @@
 <?php
-require_once(dirname(__FILE__) . "/MixpanelBaseProducer.php");
-require_once(dirname(__FILE__) . "/MixpanelPeople.php");
-require_once(dirname(__FILE__) . "/../ConsumerStrategies/CurlConsumer.php");
+
+namespace Mixpanel\Producers;
+
+use Mixpanel\Exception;
+use Mixpanel\ConsumerStrategies\CurlConsumer;
 
 /**
  * Provides an API to track events on Mixpanel
  */
-class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
+class MixpanelEvents extends MixpanelBaseProducer {
 
     /**
      * An array of properties to attach to every tracked event
@@ -143,7 +145,7 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
         );
 
         $options = array_merge($this->_options, array("endpoint" => $this->_getEndpoint(), "fork" => false));
-        $curlConsumer = new ConsumerStrategies_CurlConsumer($options);
+        $curlConsumer = new CurlConsumer($options);
         $success = $curlConsumer->persist(array($msg));
         if (!$success) {
             error_log("Creating Mixpanel Alias (original id: $original_id, new id: $new_id) failed");

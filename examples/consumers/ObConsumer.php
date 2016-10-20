@@ -1,7 +1,8 @@
 <?php
-require_once(dirname(__FILE__) . "/../../lib/ConsumerStrategies/AbstractConsumer.php");
 
-class ObConsumer extends ConsumerStrategies_AbstractConsumer {
+use Mixpanel\ConsumerStrategies\AbstractConsumer;
+
+class ObConsumer extends AbstractConsumer {
     public function persist($batch) {
 
         if (isset($batch[0]['event']) && $batch[0]['event'] == "force_error") {
