@@ -94,8 +94,9 @@ class MixpanelEventsProducerTest extends PHPUnit_Framework_TestCase {
         try {
             $instance->createAlias(1, 2);
             $this->assertStringEqualsFile($tmp_file, '[{"event":"$create_alias","properties":{"distinct_id":1,"alias":2,"token":"token"}}]' . PHP_EOL);
-        } finally {
+        } catch (Exception $e) {
             unlink($tmp_file);
+            throw $e;
         }
     }
 }
