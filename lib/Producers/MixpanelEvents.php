@@ -142,9 +142,22 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
             "properties"    =>  array("distinct_id" => $original_id, "alias" => $new_id, "token" => $this->_token)
         );
 
-        $options = array_merge($this->_options, array("endpoint" => $this->_getEndpoint(), "fork" => false));
-        $curlConsumer = new ConsumerStrategies_CurlConsumer($options);
-        $success = $curlConsumer->persist(array($msg));
+        // Save the current fork/async options
+        $old_fork = isset($this->_options['fork']) ? $this->_options['fork'] : false;
+        $old_async = isset($this->_options['async']) ? $this->_options['async'] : false;
+
+        // Override fork/async to make the new consumer synchronous
+        $this->_options['fork'] = false;
+        $this->_options['async'] = false;
+
+        // The name is ambiguous, but this creates a new consumer with current $this->_options
+        $consumer = $this->_getConsumer();
+        $success = $consumer->persist(array($msg));
+
+        // Restore the original fork/async settings
+        $this->_options['fork'] = $old_fork;
+        $this->_options['async'] = $old_async;
+
         if (!$success) {
             error_log("Creating Mixpanel Alias (original id: $original_id, new id: $new_id) failed");
             throw new Exception("Tried to create an alias but the call was not successful");

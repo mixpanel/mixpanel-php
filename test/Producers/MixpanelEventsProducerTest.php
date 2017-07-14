@@ -83,4 +83,19 @@ class MixpanelEventsProducerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals($original_id, $msg['properties']['distinct_id']);
         $this->assertEquals($new_id, $msg['properties']['alias']);
     }
+
+    public function testCreateAliasRespectsConsumerSetting() {
+        $tmp_file = __DIR__ . '/test.tmp';
+        $this->assertFileNotExists($tmp_file);
+
+        $options = array('consumer' => 'file', 'file' => $tmp_file);
+        $instance = new Producers_MixpanelEvents('token', $options);
+
+        try {
+            $instance->createAlias(1, 2);
+            $this->assertStringEqualsFile($tmp_file, '[{"event":"$create_alias","properties":{"distinct_id":1,"alias":2,"token":"token"}}]' . PHP_EOL);
+        } finally {
+            unlink($tmp_file);
+        }
+    }
 }
