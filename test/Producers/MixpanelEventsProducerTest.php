@@ -98,5 +98,7 @@ class MixpanelEventsProducerTest extends PHPUnit_Framework_TestCase {
             unlink($tmp_file);
             throw $e;
         }
+
+        unlink($tmp_file);
     }
 }
