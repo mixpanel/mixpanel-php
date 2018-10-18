@@ -27,9 +27,9 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
 
         // if no time is passed in, use the current time
         if (!array_key_exists('time', $properties)) $properties['time'] = time();
-
         $params['event'] = $event;
         $params['properties'] = array_merge($this->_super_properties, $properties);
+
 
         $this->enqueue($params);
     }
@@ -120,7 +120,8 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
      * @param string|int $user_id
      */
     public function identify($user_id) {
-        $this->register("distinct_id", $user_id);
+        $this->register('distinct_id', $user_id);
+        $this->register('$user_id', $user_id);
     }
 
 
