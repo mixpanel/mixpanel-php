@@ -111,7 +111,7 @@ class Mixpanel extends Base_MixpanelBase {
 
     /**
      * An instance of the MixpanelPeople class (used to create/update profiles)
-     * @var MixpanelPeople
+     * @var Producers_MixpanelPeople
      */
     public $people;
 
