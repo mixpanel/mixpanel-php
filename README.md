@@ -78,6 +78,15 @@ For further examples and options checkout out the "examples" folder
 
 Changelog
 -------------
+Version 2.7.0:
+ * Dropped test support for EOL PHP version (all < 7.1)
+ * Added <a href="https://github.com/mixpanel/mixpanel-php/commit/6f15000309093b54f7f59f07af297f576fd3a498">Parallel cURL implementation</a>
+ * <a href="https://github.com/mixpanel/mixpanel-php/commit/1f814c1be704217e4bc8bf570fad844360fa7318">Make createAlias adhere to the consumer config</a>
+ * Added <a href="https://github.com/mixpanel/mixpanel-php/commit/f2812f4e696ef747b2ab0640f46df97d1bf309c0">option to set $ignore_alias on people updates</a>
+ * Fixed <a href="https://github.com/mixpanel/mixpanel-php/commit/d50267c48b08eb3c5e1dee2b5dd932cf2b4c3977">Singleton instance must depend on requested token</a>
+ * Fixed license type in composer.json
+ * Remove testing on HHVM as its no longer support by composer
+
 Version 2.6.2:
  * Added support for $ignore_time
  * Cleaned up some comments to be more clear
