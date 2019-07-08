@@ -106,7 +106,7 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
     /**
      * Write using the cURL php extension
      * @param $url
-     * @param $data
+     * @param $batch
      * @return bool
      */
     protected function _execute($url, $batch) {
