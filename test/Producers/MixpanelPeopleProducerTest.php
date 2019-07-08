@@ -29,6 +29,7 @@ class MixpanelPeopleProducerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals("token", $msg['$token']);
         $this->assertEquals("192.168.0.1", $msg['$ip']);
         $this->assertArrayNotHasKey('$ignore_time', $msg);
+        $this->assertArrayNotHasKey('$ignore_alias', $msg);
         $this->assertArrayHasKey('$set', $msg);
         $this->assertArrayHasKey("name", $msg['$set']);
         $this->assertEquals("John", $msg['$set']['name']);
@@ -43,6 +44,21 @@ class MixpanelPeopleProducerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals("token", $msg['$token']);
         $this->assertEquals("192.168.0.1", $msg['$ip']);
         $this->assertEquals(true, $msg['$ignore_time']);
+        $this->assertArrayHasKey('$set', $msg);
+        $this->assertArrayHasKey("name", $msg['$set']);
+        $this->assertEquals("John", $msg['$set']['name']);
+    }
+
+   public function testSetIgnoreAlias() {
+        $this->_instance->set(12345, array("name" => "John"), "192.168.0.1", false, true);
+        $queue = $this->_instance->getQueue();
+        $msg = $queue[count($queue)-1];
+
+        $this->assertEquals(12345, $msg['$distinct_id']);
+        $this->assertEquals("token", $msg['$token']);
+        $this->assertEquals("192.168.0.1", $msg['$ip']);
+        $this->assertEquals(false, $msg['$ignore_time']);
+        $this->assertEquals(true, $msg['$ignore_alias']);
         $this->assertArrayHasKey('$set', $msg);
         $this->assertArrayHasKey("name", $msg['$set']);
         $this->assertEquals("John", $msg['$set']['name']);
