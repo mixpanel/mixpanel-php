@@ -289,7 +289,7 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
         $body = $lines[count($lines) - 1];
 
         // if the connection has been closed lets kill the socket
-        if ($headers['Connection'] == "close") {
+        if (array_key_exists("Connection", $headers) and $headers['Connection'] == "close") {
             $this->_destroySocket();
             if ($this->_debug()) {
                 $this->_log("Server told us connection closed so lets destroy the socket so it'll reconnect on next call");
