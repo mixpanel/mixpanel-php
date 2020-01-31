@@ -90,9 +90,9 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
      */
     public function persist($batch) {
         if (count($batch) > 0) {
-            $data = "data=" . $this->_encode($batch);
             $url = $this->_protocol . "://" . $this->_host . $this->_endpoint;
             if ($this->_fork) {
+                $data = "data=" . $this->_encode($batch);
                 return $this->_execute_forked($url, $data);
             } else {
                 return $this->_execute($url, $batch);
