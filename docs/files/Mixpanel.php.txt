@@ -192,11 +192,13 @@ class Mixpanel extends Base_MixpanelBase {
 
 
     /**
-     * Identify the user you want to associate to tracked events
+     * Identify the user you want to associate to tracked events. The $anon_id must be UUID v4 format and not already merged to an $identified_id.
+     * All identify calls with a new and valid $anon_id will trigger a track $identify event, and merge to the $identified_id.
      * @param string|int $user_id
+     * @param string|int $anon_id
      */
-    public function identify($user_id) {
-        $this->_events->identify($user_id);
+    public function identify($user_id, $anon_id = null) {
+        $this->_events->identify($user_id, $anon_id);
     }
 
     /**
@@ -291,13 +293,13 @@ class Mixpanel extends Base_MixpanelBase {
 
 
     /**
-     * Alias an existing id with a different unique id. This is helpful when you want to associate a generated id
-     * (such as a session id) to a user id or username.
-     * @param string|int $original_id
-     * @param string|int $new_id
+     * An alias to be merged with the distinct_id. Each alias can only map to one distinct_id.
+     * This is helpful when you want to associate a generated id (such as a session id) to a user id or username.
+     * @param string|int $distinct_id
+     * @param string|int $alias
      */
-    public function createAlias($original_id, $new_id) {
-        $this->_events->createAlias($original_id, $new_id);
+    public function createAlias($distinct_id, $alias) {
+        $this->_events->createAlias($distinct_id, $alias);
     }
 }
 

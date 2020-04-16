@@ -76,12 +76,12 @@ class MixpanelEventsProducerTest extends PHPUnit_Framework_TestCase {
     }
 
     public function testCreateAlias() {
-        $original_id = 1;
-        $new_id = 2;
-        $msg = $this->_instance->createAlias($original_id, $new_id);
+        $distinct_id = 1;
+        $alias = 2;
+        $msg = $this->_instance->createAlias($distinct_id, $alias);
         $this->assertEquals('$create_alias', $msg['event']);
-        $this->assertEquals($original_id, $msg['properties']['distinct_id']);
-        $this->assertEquals($new_id, $msg['properties']['alias']);
+        $this->assertEquals($distinct_id, $msg['properties']['distinct_id']);
+        $this->assertEquals($alias, $msg['properties']['alias']);
     }
 
     public function testCreateAliasRespectsConsumerSetting() {
@@ -100,5 +100,37 @@ class MixpanelEventsProducerTest extends PHPUnit_Framework_TestCase {
         }
 
         unlink($tmp_file);
+    }
+
+    public function testIdentifyInvalidAnonId() {
+        $user_id = 1;
+        $anon_id = 111;
+
+        $this->_instance->identify($user_id, $anon_id);
+        $queue = $this->_instance->getQueue();
+
+        $this->assertEquals(0, count($queue));
+    }
+
+    public function testIdentifyValidAnonId() {
+        $user_id = 1;
+        $anon_id = '2c93fdf3-4fbf-4fec-baaf-136ce87c13cc';
+
+        $test = $this->_instance->identify($user_id, $anon_id);
+        $queue = $this->_instance->getQueue();
+
+        $this->assertEquals(1, count($queue));
+        $this->assertEquals('$identify', $queue[0]['event']);
+        $this->assertEquals($user_id, $queue[0]['properties']['$identified_id']);
+        $this->assertEquals($anon_id, $queue[0]['properties']['$anon_id']);
+    }
+
+    public function testIdentifyNoAnonId() {
+        $user_id = 1;
+
+        $test = $this->_instance->identify($user_id);
+        $queue = $this->_instance->getQueue();
+
+        $this->assertEquals(0, count($queue));
     }
 }

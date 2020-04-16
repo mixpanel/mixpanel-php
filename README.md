@@ -69,6 +69,11 @@ Production Notes
 -------------
 By default, data is sent using ssl over cURL. This works fine when you're tracking a small number of events or aren't concerned with the potentially blocking nature of the PHP cURL calls. However, this isn't very efficient when you're sending hundreds of events (such as in batch processing). Our library comes packaged with an easy way to use a persistent socket connection for much more efficient writes. To enable the persistent socket, simply pass `'consumer' => 'socket'` as an entry in the `$options` array when you instantiate the Mixpanel class. Additionally, you can contribute your own persistence implementation by creating a custom Consumer.
 
+Testing
+-------------
+mixpanel-php uses `phpunit` as the testing framework. Please ensure that `composer` is up to date. 
+To run tests, execute `composer run-script unit-tests` on the root directory. 
+
 Documentation
 -------------
 * <a href="https://mixpanel.com/help/reference/php" target="_blank">Reference Docs</a>
