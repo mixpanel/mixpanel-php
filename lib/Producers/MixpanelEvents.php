@@ -116,30 +116,45 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
 
 
     /**
-     * Identify the user you want to associate to tracked events
+     * Identify the user you want to associate to tracked events. The $anon_id must be UUID v4 format and not already merged to an $identified_id.
+     * All identify calls with a new and valid $anon_id will trigger a track $identify event, and merge to the $identified_id.
      * @param string|int $user_id
+     * @param string|int $anon_id [optional]
      */
-    public function identify($user_id) {
+    public function identify($user_id, $anon_id = null) {
         $this->register("distinct_id", $user_id);
+
+        $UUIDv4 = '/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89AB][0-9a-f]{3}-[0-9a-f]{12}$/i';
+        if (!empty($anon_id)) {
+            if (preg_match($UUIDv4, $anon_id) !== 1) {
+                /* not a valid uuid */
+                error_log("Running Identify method (identified_id: $user_id, anon_id: $anon_id) failed, anon_id not in UUID v4 format");
+            } else {
+                $this->track('$identify', array(
+                    '$identified_id' => $user_id,
+                    '$anon_id'       => $anon_id
+                ));
+            }
+        }
     }
 
 
     /**
-     * Alias an existing id with a different unique id. This is helpful when you want to associate a generated id to
-     * a username or e-mail address.
+     * An alias to be merged with the distinct_id. Each alias can only map to one distinct_id.
+     * This is helpful when you want to associate a generated id (such as a session id) to a user id or username.
      *
      * Because aliasing can be extremely vulnerable to race conditions and ordering issues, we'll make a synchronous
      * call directly to Mixpanel when this method is called. If it fails we'll throw an Exception as subsequent
      * events are likely to be incorrectly tracked.
-     * @param string|int $original_id
-     * @param string|int $new_id
+     * @param string|int $distinct_id
+     * @param string|int $alias
      * @return array $msg
      * @throws Exception
      */
-    public function createAlias($original_id, $new_id) {
+    public function createAlias($distinct_id, $alias) {
         $msg = array(
             "event"         => '$create_alias',
-            "properties"    =>  array("distinct_id" => $original_id, "alias" => $new_id, "token" => $this->_token)
+            "properties"    =>  array("distinct_id" => $distinct_id, "alias" => $alias, "token" => $this->_token)
         );
 
         // Save the current fork/async options
@@ -159,7 +174,7 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
         $this->_options['async'] = $old_async;
 
         if (!$success) {
-            error_log("Creating Mixpanel Alias (original id: $original_id, new id: $new_id) failed");
+            error_log("Creating Mixpanel Alias (distinct id: $distinct_id, alias: $alias) failed");
             throw new Exception("Tried to create an alias but the call was not successful");
         } else {
             return $msg;

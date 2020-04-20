@@ -5,6 +5,9 @@
         "mixpanel",
         "mixpanel php"
     ],
+    "scripts": {
+        "unit-tests": "phpunit"
+    },
     "homepage": "https://mixpanel.com/help/reference/php",
     "license": "Apache-2.0",
     "authors": [
