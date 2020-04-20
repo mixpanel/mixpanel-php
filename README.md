@@ -83,6 +83,12 @@ For further examples and options checkout out the "examples" folder
 
 Changelog
 -------------
+Version 2.8.0
+* Added `$anon_id` parameter to `identify` method, and a track call when parameter exists and is in UUID v4 format
+* Change parameter names for `createAlias` method to `$distinct_id` and `$alias`
+* Prevent unnecessary call to _encode on non-forked CurlConsumer
+* make sure 'Connection' exists before accessing it
+
 Version 2.7.0:
  * Dropped test support for EOL PHP version (all < 7.1)
  * Added <a href="https://github.com/mixpanel/mixpanel-php/commit/6f15000309093b54f7f59f07af297f576fd3a498">Parallel cURL implementation</a>
