@@ -124,7 +124,7 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
     public function identify($user_id, $anon_id = null) {
         $this->register("distinct_id", $user_id);
 
-        $UUIDv4 = '/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89AB][0-9a-f]{3}-[0-9a-f]{12}$/i';
+        $UUIDv4 = '/^[a-zA-Z0-9]*-[a-zA-Z0-9]*-[a-zA-Z0-9]*-[a-zA-Z0-9]*-[a-zA-Z0-9]*$/i';
         if (!empty($anon_id)) {
             if (preg_match($UUIDv4, $anon_id) !== 1) {
                 /* not a valid uuid */

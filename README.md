@@ -83,6 +83,9 @@ For further examples and options checkout out the "examples" folder
 
 Changelog
 -------------
+Version 2.8.1
+* Updated `$anon_id` regex in `identify` method to support all Mixpanel distinct IDs
+
 Version 2.8.0
 * Added `$anon_id` parameter to `identify` method, and a track call when parameter exists and is in UUID v4 format
 * Change parameter names for `createAlias` method to `$distinct_id` and `$alias`
