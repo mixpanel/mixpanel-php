@@ -24,6 +24,6 @@
         "phpdocumentor/phpdocumentor": "2.9.*"
     },
     "autoload": {
-        "files": ["lib/Mixpanel.php"]
+        "classmap": ["lib"]
     }
 }
