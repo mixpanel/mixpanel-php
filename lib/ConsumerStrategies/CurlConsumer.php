@@ -58,11 +58,11 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
 
         $this->_host = $options['host'];
         $this->_endpoint = $options['endpoint'];
-        $this->_connect_timeout = array_key_exists('connect_timeout', $options) ? $options['connect_timeout'] : 5;
-        $this->_timeout = array_key_exists('timeout', $options) ? $options['timeout'] : 30;
-        $this->_protocol = array_key_exists('use_ssl', $options) && $options['use_ssl'] == true ? "https" : "http";
-        $this->_fork = array_key_exists('fork', $options) ? ($options['fork'] == true) : false;
-        $this->_num_threads = array_key_exists('num_threads', $options) ? max(1, intval($options['num_threads'])) : 1;
+        $this->_connect_timeout = isset($options['connect_timeout']) ? $options['connect_timeout'] : 5;
+        $this->_timeout = isset($options['timeout']) ? $options['timeout'] : 30;
+        $this->_protocol = isset($options['use_ssl']) && $options['use_ssl'] == true ? "https" : "http";
+        $this->_fork = isset($options['fork']) ? ($options['fork'] == true) : false;
+        $this->_num_threads = isset($options['num_threads']) ? max(1, intval($options['num_threads'])) : 1;
 
         // ensure the environment is workable for the given settings
         if ($this->_fork == true) {

@@ -83,8 +83,8 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
 
         $this->_host = $options['host'];
         $this->_endpoint = $options['endpoint'];
-        $this->_connect_timeout = array_key_exists('connect_timeout', $options) ? $options['connect_timeout'] : 5;
-        $this->_async = array_key_exists('async', $options) && $options['async'] === false ? false : true;
+        $this->_connect_timeout = isset($options['connect_timeout']) ? $options['connect_timeout'] : 5;
+        $this->_async = isset($options['async']) && $options['async'] === false ? false : true;
 
         if (array_key_exists('use_ssl', $options) && $options['use_ssl'] == true) {
             $this->_protocol = "ssl";
@@ -289,7 +289,7 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
         $body = $lines[count($lines) - 1];
 
         // if the connection has been closed lets kill the socket
-        if (array_key_exists("Connection", $headers) and $headers['Connection'] == "close") {
+        if (isset($headers["Connection"]) and $headers['Connection'] == "close") {
             $this->_destroySocket();
             if ($this->_debug()) {
                 $this->_log("Server told us connection closed so lets destroy the socket so it'll reconnect on next call");
