@@ -20,6 +20,7 @@ class Base_MixpanelBase {
         "host"              => "api.mixpanel.com", // the host name for api calls
         "events_endpoint"   => "/track", // host relative endpoint for events
         "people_endpoint"   => "/engage", // host relative endpoint for people updates
+		"group_endpoint"	=> "/groups", // host relative endpoint for group updates
         "use_ssl"           => true, // use ssl when available
         "error_callback"    => null // callback to use on consumption failures
     );

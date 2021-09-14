@@ -2,6 +2,7 @@
 
 require_once(dirname(__FILE__) . "/Base/MixpanelBase.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelPeople.php");
+require_once(dirname(__FILE__) . "/Producers/MixpanelGroup.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelEvents.php");
 
 /**
@@ -115,6 +116,12 @@ class Mixpanel extends Base_MixpanelBase {
      */
     public $people;
 
+	/**
+	 * An instance of the MixpanelGroup class (used to create/update groups)
+	 * @var Producers_MixpanelGroup
+	 */
+	public $group;
+
 
     /**
      * An instance of the MixpanelEvents class
@@ -138,6 +145,7 @@ class Mixpanel extends Base_MixpanelBase {
     public function __construct($token, $options = array()) {
         parent::__construct($options);
         $this->people = new Producers_MixpanelPeople($token, $options);
+		$this->group = new Producers_MixpanelGroup($token, $options);
         $this->_events = new Producers_MixpanelEvents($token, $options);
     }
 
