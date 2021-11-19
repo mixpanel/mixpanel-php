@@ -3,10 +3,11 @@
 require_once(dirname(__FILE__) . "/Base/MixpanelBase.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelPeople.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelEvents.php");
+require_once(dirname(__FILE__) . "/Producers/MixpanelGroups.php");
 
 /**
- * This is the main class for the Mixpanel PHP Library which provides all of the methods you need to track events and
- * create/update profiles.
+ * This is the main class for the Mixpanel PHP Library which provides all of the methods you need to track events,
+  * create/update profiles and group profiles.
  *
  * Architecture
  * -------------
@@ -122,6 +123,13 @@ class Mixpanel extends Base_MixpanelBase {
      */
     private $_events;
 
+    /**
+     * An instance of the MixpanelGroups class (used to create/update group profiles)
+     * @var Producers_MixpanelPeople
+     */
+    public $group;
+ 
+
 
     /**
      * Instances' list of the Mixpanel class (for singleton use, splitted by token)
@@ -139,6 +147,7 @@ class Mixpanel extends Base_MixpanelBase {
         parent::__construct($options);
         $this->people = new Producers_MixpanelPeople($token, $options);
         $this->_events = new Producers_MixpanelEvents($token, $options);
+        $this->group = new Producers_MixpanelGroups($token,$options);
     }
 
 
