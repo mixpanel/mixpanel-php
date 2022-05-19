@@ -74,7 +74,7 @@ class MixpanelGroupsProducerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals("Logged In", $msg['$union']['actions']);
     }
 
-    public function testAppendMultiple() {
+    public function testUnionMultiple() {
         $this->_instance->append("company","Mixpanel", "actions", array("Logged In", "Logged Out"));
         $queue = $this->_instance->getQueue();
         $msg = $queue[count($queue)-1];
