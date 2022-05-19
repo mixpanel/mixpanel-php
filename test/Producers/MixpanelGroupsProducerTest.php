@@ -63,7 +63,7 @@ class MixpanelGroupsProducerTest extends PHPUnit_Framework_TestCase {
     }
 
     public function testAppendSingle() {
-        $this->_instance->append("company","Mixpanel", "actions", "Logged In");
+        $this->_instance->union("company","Mixpanel", "actions", "Logged In");
         $queue = $this->_instance->getQueue();
         $msg = $queue[count($queue)-1];
 
