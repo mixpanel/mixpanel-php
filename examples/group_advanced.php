@@ -23,12 +23,12 @@ $mp->group->setOnce("company","Mixpanel3", array(
 
 
 // unsets the property test 
-//$mp->group->remove("company","Mixpanel3", array("test"));
+$mp->group->remove("company","Mixpanel3", array("test"));
 
 
 // add Funnels Cohorts and Flows to a list of "Features" for Group profile Mixpanel3
-//$mp->group->append("company","Mixpanel3", "Features", array("Funnels","Flows","Cohorts") );
+$mp->group->union("company","Mixpanel3", "Features", array("Funnels","Flows","Cohorts") );
 
 
 //deletegroup
-//$mp->group->deleteGroup("company","Mixpanel3");
+$mp->group->deleteGroup("company","Mixpanel3");
