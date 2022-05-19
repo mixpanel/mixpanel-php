@@ -62,7 +62,7 @@ class MixpanelGroupsProducerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals("Tech", $msg['$set_once']['industry']);
     }
 
-    public function testAppendSingle() {
+    public function testUnionSingle() {
         $this->_instance->union("company","Mixpanel", "actions", "Logged In");
         $queue = $this->_instance->getQueue();
         $msg = $queue[count($queue)-1];
