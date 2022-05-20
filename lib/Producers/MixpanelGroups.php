@@ -76,7 +76,6 @@ class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
      * @param boolean $ignore_time If the $ignore_time property is true, Mixpanel will not automatically update the "Last Seen" property of the group profile. Otherwise, Mixpanel will add a "Last Seen" property associated with the current time
      */
     public function union($group_key, $group_id, $prop, $val, $ignore_time = false) {
-
         $payload = $this->_constructPayload($group_key, $group_id, '$union', array("$prop" => $val), $ignore_time);
         $this->enqueue($payload);
     }
