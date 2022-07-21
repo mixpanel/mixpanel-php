@@ -132,6 +132,8 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
             curl_multi_add_handle($mh,$ch);
         }
 
+        $running = 0;
+
         do {
             curl_multi_exec($mh, $running);
             curl_multi_select($mh);
