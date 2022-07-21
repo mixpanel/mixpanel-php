@@ -60,7 +60,7 @@ class Base_MixpanelBase {
      * @return bool
      */
     protected function _debug() {
-        return array_key_exists("debug", $this->_options) && $this->_options["debug"] == true;
+        return isset($this->_options["debug"]) && $this->_options["debug"] == true;
     }
 
 }

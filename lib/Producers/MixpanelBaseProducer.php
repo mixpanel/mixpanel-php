@@ -60,12 +60,12 @@ abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
         parent::__construct($options);
 
         // register any customer consumers
-        if (array_key_exists("consumers", $options)) {
+        if (isset($options["consumers"])) {
             $this->_consumers = array_merge($this->_consumers, $options['consumers']);
         }
 
         // set max queue size
-        if (array_key_exists("max_queue_size", $options)) {
+        if (isset($options["max_queue_size"])) {
             $this->_max_queue_size = $options['max_queue_size'];
         }
 

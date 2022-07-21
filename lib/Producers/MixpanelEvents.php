@@ -23,10 +23,10 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
     public function track($event, $properties = array()) {
 
         // if no token is passed in, use current token
-        if (!array_key_exists("token", $properties)) $properties['token'] = $this->_token;
+        if (!isset($properties["token"])) $properties['token'] = $this->_token;
 
         // if no time is passed in, use the current time
-        if (!array_key_exists('time', $properties)) $properties['time'] = time();
+        if (!isset($properties["time"])) $properties['time'] = time();
 
         $params['event'] = $event;
         $params['properties'] = array_merge($this->_super_properties, $properties);
