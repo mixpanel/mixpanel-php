@@ -20,6 +20,7 @@ class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
             '$token' => $this->_token,
             '$group_key' => $group_key,
             '$group_id' => $group_id,
+            '$time' => microtime(true),
             $operation => $value
         );
         if ($ignore_time === true) $payload['$ignore_time'] = true;

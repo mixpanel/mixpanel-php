@@ -26,7 +26,7 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
         if (!isset($properties["token"])) $properties['token'] = $this->_token;
 
         // if no time is passed in, use the current time
-        if (!isset($properties["time"])) $properties['time'] = time();
+        if (!isset($properties["time"])) $properties['time'] = microtime(true);
 
         $params['event'] = $event;
         $params['properties'] = array_merge($this->_super_properties, $properties);
