@@ -83,6 +83,15 @@ For further examples and options checkout out the "examples" folder
 
 Changelog
 -------------
+Version 2.10.0
+* send millisecond precision timestamps
+
+Version 2.9.0
+* update regex for $anon_id check
+* Group Analytics Support
+* Fix PHP 8.1 deprecation warning
+* PHP 7.4 compatibility
+
 Version 2.8.1
 * Updated `$anon_id` regex in `identify` method to support all Mixpanel distinct IDs
 
