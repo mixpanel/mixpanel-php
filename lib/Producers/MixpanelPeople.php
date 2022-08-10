@@ -20,6 +20,7 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
         $payload = array(
             '$token' => $this->_token,
             '$distinct_id' => $distinct_id,
+            '$time' => microtime(true),
             $operation => $value
         );
         if ($ip !== null) $payload['$ip'] = $ip;
