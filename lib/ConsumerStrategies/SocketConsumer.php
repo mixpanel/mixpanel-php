@@ -72,6 +72,11 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
      */
     private $_async;
 
+    /**
+     * @var int the port to use for the socket connection
+     */
+    private $_port;
+
 
     /**
      * Creates a new SocketConsumer and assigns properties from the $options array
