@@ -83,6 +83,10 @@ For further examples and options checkout out the "examples" folder
 
 Changelog
 -------------
+Version 2.11.0
+* Fix identify regex for $anon_id
+* Fix PHP 8.2 deprecation warning
+
 Version 2.10.0
 * send millisecond precision timestamps
 
