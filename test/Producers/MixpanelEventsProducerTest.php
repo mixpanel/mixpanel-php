@@ -138,6 +138,19 @@ class MixpanelEventsProducerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals($anon_id, $queue[0]['properties']['$anon_id']);
     }
 
+    public function testIdentifyValidAnonIdDevice() {
+        $user_id = 1;
+        $anon_id = '$device:13bbf7943e584-0885c2531-5c793977-3e8000-13bbf7943e64cf';
+
+        $test = $this->_instance->identify($user_id, $anon_id);
+        $queue = $this->_instance->getQueue();
+
+        $this->assertEquals(1, count($queue));
+        $this->assertEquals('$identify', $queue[0]['event']);
+        $this->assertEquals($user_id, $queue[0]['properties']['$identified_id']);
+        $this->assertEquals($anon_id, $queue[0]['properties']['$anon_id']);
+    }
+
     public function testIdentifyNoAnonId() {
         $user_id = 1;
 

@@ -116,15 +116,16 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
 
 
     /**
-     * Identify the user you want to associate to tracked events. The $anon_id must be UUID v4 format and not already merged to an $identified_id.
-     * All identify calls with a new and valid $anon_id will trigger a track $identify event, and merge to the $identified_id.
+     * Identify the user you want to associate to tracked events. The $anon_id must be UUID v4 format (optionally with the
+     * prefix '$device:') and not already merged to an $identified_id. All identify calls with a new and valid $anon_id will
+     * trigger a track $identify event, and merge to the $identified_id.
      * @param string|int $user_id
      * @param string|int $anon_id [optional]
      */
     public function identify($user_id, $anon_id = null) {
         $this->register("distinct_id", $user_id);
 
-        $UUIDv4 = '/^[a-zA-Z0-9]*-[a-zA-Z0-9]*-[a-zA-Z0-9]*-[a-zA-Z0-9]*-[a-zA-Z0-9]*$/i';
+        $UUIDv4 = '/^(\$device:)?[a-zA-Z0-9]*-[a-zA-Z0-9]*-[a-zA-Z0-9]*-[a-zA-Z0-9]*-[a-zA-Z0-9]*$/i';
         if (!empty($anon_id)) {
             if (preg_match($UUIDv4, $anon_id) !== 1) {
                 /* not a valid uuid */
