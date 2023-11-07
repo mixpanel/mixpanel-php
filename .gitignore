@@ -2,4 +2,4 @@
 *.log
 *.lock
 *.idea
-vendor
+/vendor

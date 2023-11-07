@@ -1,5 +1,6 @@
 <?php
-require_once("../lib/Mixpanel.php"); // import the Mixpanel class
+
+use Mixpanel\Mixpanel;
 
 // Make calls using the PHP cURL extension not using SSL
 // Warning: This will block until the requests are complete.
