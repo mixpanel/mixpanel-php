@@ -1,8 +1,8 @@
 <?php
-require_once("../lib/Mixpanel.php"); // import the Mixpanel class
-require_once("consumers/ObConsumer.php"); // import the Mixpanel class
 
 // define a callback function to handle errors made in a consumer
+use Mixpanel\Mixpanel;
+
 function handleError($code, $data) {
     echo "This is my  customer error handler. I've received an error! code = " . $code . " : data = " . $data . "<br />";
 }
@@ -11,7 +11,7 @@ function handleError($code, $data) {
 $mp = new Mixpanel("MIXPANEL_PROJECT_TOKEN", array(
     "debug"             => true,
     "max_batch_size"    => 1,
-    "consumers"         => array("ob" => "ObConsumer"),
+    "consumers"         => array("ob" => ObConsumer::class),
     "consumer"          => "ob",
     "error_callback"    => "handleError" // register the error callback
 ));

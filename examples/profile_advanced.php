@@ -1,6 +1,6 @@
 <?php
-// import the Mixpanel class
-require_once("../lib/Mixpanel.php");
+
+use Mixpanel\Mixpanel;
 
 // instantiate the Mixpanel class
 $mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN");
