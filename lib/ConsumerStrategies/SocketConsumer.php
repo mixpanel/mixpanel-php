@@ -286,8 +286,8 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
 
         }
 
-	    // extract status
-	    $line_one_exploded = explode(" ", $lines[0]);
+		// extract status
+		$line_one_exploded = explode(" ", $lines[0]);
 		if ($line_one_exploded === false || ! isset($line_one_exploded[1])) {
 			$status = "Unable to extract HTTP status from response";
 		} else {
