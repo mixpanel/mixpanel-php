@@ -26,7 +26,11 @@ class BotClassifier_AiBotClassifier {
             return array('$is_ai_bot' => false);
         }
         foreach ($this->_patterns as $bot) {
-            if (preg_match($bot["pattern"], $user_agent)) {
+            $match = @preg_match($bot["pattern"], $user_agent);
+            if ($match === false) {
+                continue; // Invalid regex, skip this pattern
+            }
+            if ($match) {
                 return array(
                     '$is_ai_bot'      => true,
                     '$ai_bot_name'     => $bot["name"],

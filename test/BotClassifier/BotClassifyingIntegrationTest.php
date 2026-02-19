@@ -150,6 +150,14 @@ class BotClassifyingIntegrationTest extends TestCase {
         $queue = $mp->getQueue();
         $this->assertEquals(1, count($queue));
         $this->assertEquals("page_view", $queue[0]['event']);
+        // Classification happens in the consumer during flush, not at track() time
+        $mp->flush();
+        $this->assertFileExists($file);
+        $contents = file_get_contents($file);
+        $this->assertStringContainsString('$is_ai_bot', $contents);
+        $this->assertStringContainsString('$ai_bot_name', $contents);
+        $this->assertStringContainsString('$ai_bot_provider', $contents);
+        $this->assertStringContainsString('$ai_bot_category', $contents);
         $mp->reset();
         if (file_exists($file)) { unlink($file); }
     }

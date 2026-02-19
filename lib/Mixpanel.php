@@ -236,11 +236,26 @@ class Mixpanel extends Base_MixpanelBase {
      * @param array $properties
      */
     public function track($event, $properties = array()) {
-        if ($this->_botClassifier !== null && isset($properties['$user_agent'])) {
+        if ($this->_botClassifier !== null
+            && isset($properties['$user_agent'])
+            && !$this->_isUsingBotClassifyingConsumer()) {
             $classification = $this->_botClassifier->classify($properties['$user_agent']);
             $properties = array_merge($properties, $classification);
         }
         $this->_events->track($event, $properties);
+    }
+
+    /**
+     * Check if the configured consumer is BotClassifyingConsumer to avoid double-classification.
+     * @return bool
+     */
+    private function _isUsingBotClassifyingConsumer() {
+        if (!isset($this->_options['consumers']) || !is_array($this->_options['consumers'])) {
+            return false;
+        }
+        $consumerKey = $this->_options['consumer'];
+        return isset($this->_options['consumers'][$consumerKey])
+            && $this->_options['consumers'][$consumerKey] === 'ConsumerStrategies_BotClassifyingConsumer';
     }
 
 
