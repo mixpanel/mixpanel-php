@@ -4,6 +4,8 @@ require_once(dirname(__FILE__) . "/Base/MixpanelBase.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelPeople.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelEvents.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelGroups.php");
+require_once(dirname(__FILE__) . "/BotClassifier/AiBotClassifier.php");
+require_once(dirname(__FILE__) . "/ConsumerStrategies/BotClassifyingConsumer.php");
 
 /**
  * This is the main class for the Mixpanel PHP Library which provides all of the methods you need to track events,
@@ -123,6 +125,9 @@ class Mixpanel extends Base_MixpanelBase {
      */
     private $_events;
 
+    /** @var BotClassifier_AiBotClassifier|null */
+    private $_botClassifier = null;
+
     /**
      * An instance of the MixpanelGroups class (used to create/update group profiles)
      * @var Producers_MixpanelPeople
@@ -148,6 +153,12 @@ class Mixpanel extends Base_MixpanelBase {
         $this->people = new Producers_MixpanelPeople($token, $options);
         $this->_events = new Producers_MixpanelEvents($token, $options);
         $this->group = new Producers_MixpanelGroups($token, $options);
+        // Initialize bot classifier if bot_detection is enabled
+        if (isset($this->_options["bot_detection"]) && $this->_options["bot_detection"]) {
+            $additional_bots = isset($this->_options["bot_additional_patterns"])
+                ? $this->_options["bot_additional_patterns"] : array();
+            $this->_botClassifier = new BotClassifier_AiBotClassifier($additional_bots);
+        }
     }
 
 
@@ -201,6 +212,15 @@ class Mixpanel extends Base_MixpanelBase {
 
 
     /**
+     * Get the events queue (delegates to the events producer).
+     * @return array
+     */
+    public function getQueue() {
+        return $this->_events->getQueue();
+    }
+
+
+    /**
      * Identify the user you want to associate to tracked events. The $anon_id must be UUID v4 format and not already merged to an $identified_id.
      * All identify calls with a new and valid $anon_id will trigger a track $identify event, and merge to the $identified_id.
      * @param string|int $user_id
@@ -216,6 +236,10 @@ class Mixpanel extends Base_MixpanelBase {
      * @param array $properties
      */
     public function track($event, $properties = array()) {
+        if ($this->_botClassifier !== null && isset($properties['$user_agent'])) {
+            $classification = $this->_botClassifier->classify($properties['$user_agent']);
+            $properties = array_merge($properties, $classification);
+        }
         $this->_events->track($event, $properties);
     }
 
