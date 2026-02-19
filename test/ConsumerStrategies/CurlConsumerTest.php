@@ -1,6 +1,8 @@
 <?php
 
-class ConsumerStrategies_CurlConsumerTest extends PHPUnit_Framework_TestCase {
+use PHPUnit\Framework\TestCase;
+
+class ConsumerStrategies_CurlConsumerTest extends TestCase {
 
     public function testSettings() {
         $consumer = new CurlConsumer(array(
