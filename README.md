@@ -1,5 +1,8 @@
 Mixpanel PHP Library [![Build Status](https://travis-ci.org/mixpanel/mixpanel-php.svg)](https://travis-ci.org/mixpanel/mixpanel-php)
 ============
+
+##### _May 13, 2026_ - [2.11.0](https://github.com/mixpanel/mixpanel-php/releases/tag/2.11.0)
+
 This library provides an API to track events and update profiles on Mixpanel.
 
 Install with Composer

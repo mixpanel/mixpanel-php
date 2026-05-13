@@ -1,0 +1,10 @@
+{
+  "analytics": {
+    "tag_prefix": "",
+    "composer_json": "composer.json",
+    "version_files": [],
+    "changelog": "CHANGELOG.md",
+    "readme": "README.md",
+    "package_name": "mixpanel/mixpanel-php"
+  }
+}
