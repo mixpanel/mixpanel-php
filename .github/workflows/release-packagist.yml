@@ -1,0 +1,181 @@
+name: Publish Release to Packagist
+
+# Tag-triggered. mixpanel-php uses bare-semver tags (e.g. `2.11.0`,
+# `2.11.0-beta.1`) - the tag IS the version (Packagist reads it directly).
+# The numeric pattern below covers both stable and pre-release tags while
+# avoiding false positives from any non-version refs.
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+*'
+
+concurrency:
+  group: packagist-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # create the draft GitHub release
+
+jobs:
+  publish:
+    name: "Publish ${{ github.ref_name }} to Packagist"
+    runs-on: ubuntu-latest
+    environment: release
+    timeout-minutes: 30
+
+    # Notes on the "publish" step:
+    #   Packagist auto-syncs from a GitHub webhook on tag push. This workflow
+    #   validates the tag, runs the test suite, and creates a draft GitHub
+    #   release. There is NO upload action - the tag push itself (which
+    #   triggered this workflow) is what completes publication once the
+    #   webhook fires. The `release` environment provides the human gate via
+    #   its required-reviewer setting (matching the pattern used by the npm
+    #   and Maven Central ports).
+
+    steps:
+      - name: Checkout tagged commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Resolve module from tag
+        id: module
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          # Find the module whose tag_prefix the tag starts with, preferring
+          # the longest match. The empty-prefix case (mixpanel-php) is handled
+          # naturally - any string startswith("") - and there's only one
+          # module here, so the resolution is trivial. Kept structured this
+          # way for parity with the multi-module ports.
+          # The `.value.tag_prefix as $p | $t | startswith($p)` form binds
+          # the prefix to a variable BEFORE switching context to $t, which
+          # is required because the inner `startswith` call would otherwise
+          # try to read `.value.tag_prefix` against the string $t.
+          MODULE=$(jq -r --arg t "$TAG" '
+            to_entries
+            | map(select(.value.tag_prefix as $p | $t | startswith($p)))
+            | max_by(.value.tag_prefix | length)
+            | .key // empty
+          ' .github/modules.json)
+
+          if [ -z "$MODULE" ]; then
+            echo "::error::Tag '$TAG' does not match any module tag_prefix in .github/modules.json"
+            exit 1
+          fi
+
+          MODULE_CONFIG=$(jq -e --arg m "$MODULE" '.[$m]' .github/modules.json)
+          TAG_PREFIX=$(echo "$MODULE_CONFIG" | jq -r '.tag_prefix')
+          VERSION="${TAG#${TAG_PREFIX}}"
+
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "::error::Version '$VERSION' (from tag '$TAG') is not a valid semver"
+            exit 1
+          fi
+
+          {
+            echo "module=$MODULE"
+            echo "version=$VERSION"
+            echo "tag_prefix=$TAG_PREFIX"
+            echo "composer_json=$(echo "$MODULE_CONFIG" | jq -r '.composer_json')"
+            echo "changelog=$(echo "$MODULE_CONFIG" | jq -r '.changelog')"
+            echo "package_name=$(echo "$MODULE_CONFIG" | jq -r '.package_name')"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Resolved tag '$TAG' -> module '$MODULE', version '$VERSION'"
+
+      - name: Verify tag commit is on master
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          git fetch origin master
+          TAG_SHA=$(git rev-parse HEAD)
+          if ! git merge-base --is-ancestor "$TAG_SHA" origin/master; then
+            echo "::error::Tag '$TAG' ($TAG_SHA) is not an ancestor of origin/master."
+            echo "Tags must be pushed from a commit on the master branch."
+            exit 1
+          fi
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@9e72090525849c5e82e596468b86eb55e9cc5401  # v2.32.0
+        with:
+          php-version: '7.4'
+          tools: composer:v2
+          coverage: none
+
+      - name: Validate composer.json
+        env:
+          COMPOSER_JSON: ${{ steps.module.outputs.composer_json }}
+        run: composer validate --strict --working-dir="$(dirname "$COMPOSER_JSON")"
+
+      - name: Install dependencies (with dev for tests)
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Run PHPUnit
+        run: vendor/bin/phpunit
+
+      - name: Re-install without dev (production smoke test)
+        run: |
+          rm -rf vendor
+          composer install --no-interaction --no-progress --prefer-dist --no-dev
+
+      - name: Extract changelog section for tag
+        env:
+          TAG: ${{ github.ref_name }}
+          CHANGELOG: ${{ steps.module.outputs.changelog }}
+        run: |
+          # Extract this tag's section from CHANGELOG.md via a sed range.
+          # The address `\@^## \[TAG\]@,\@^## \[@` selects from the version
+          # header through the next `## [` line; the inner block deletes
+          # both markers and prints the body. sed range patterns don't test
+          # the end pattern against the start line, so the start doesn't
+          # self-terminate. `\@...@` switches the address delimiter from
+          # `/` to `@` so tags containing `/` (e.g. `openfeature/v0.1.0`)
+          # don't conflict with the default `/`. Mirrors the deployed
+          # mixpanel-android extraction logic. Falls back to a placeholder
+          # if the section is missing or empty.
+          sed -n '\@^## \['"${TAG}"'\]@,\@^## \[@{\@^## \['"${TAG}"'\]@d;\@^## \[@d;p;}' "$CHANGELOG" 2>/dev/null > release_notes.md || true
+          if [ ! -s release_notes.md ]; then
+            echo "Release $TAG" > release_notes.md
+          fi
+          echo "--- release_notes.md ---"
+          cat release_notes.md
+
+      - name: Create draft GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          # Idempotent: if a draft release for this tag already exists, leave it alone.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "GitHub release for $TAG already exists; skipping creation"
+          else
+            gh release create "$TAG" \
+              --draft \
+              --title "$TAG" \
+              --notes-file release_notes.md
+          fi
+
+      - name: Summary
+        env:
+          MODULE: ${{ steps.module.outputs.module }}
+          VERSION: ${{ steps.module.outputs.version }}
+          PACKAGE_NAME: ${{ steps.module.outputs.package_name }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          {
+            echo "## ${MODULE} ${VERSION} ready"
+            echo ""
+            echo "- Tag: \`${TAG}\`"
+            echo "- Package: [${PACKAGE_NAME}](https://packagist.org/packages/${PACKAGE_NAME})"
+            echo "- [Draft GitHub Release](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG})"
+            echo ""
+            echo "### Packagist sync"
+            echo "Packagist auto-syncs from the configured GitHub webhook on tag push."
+            echo "If the new version does not appear within a few minutes, check:"
+            echo "1. The Packagist webhook on this repo's GitHub Settings -> Webhooks page (it should target https://packagist.org/api/github)"
+            echo "2. The package page on Packagist - a manual \"Update\" button is available there"
+            echo ""
+            echo "### Next step"
+            echo "Review the draft GitHub release and click **Publish release** to make it live."
+          } >> "$GITHUB_STEP_SUMMARY"
