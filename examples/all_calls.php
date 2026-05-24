@@ -1,5 +1,6 @@
 <?php
-require_once("/path/to/vendor/mixpanel/mixpanel-php/lib/Mixpanel.php"); // import the Mixpanel class
+
+use Mixpanel\Mixpanel;
 
 $mp = new Mixpanel("MIXPANEL_PROJECT_TOKEN", array(
     "debug"             => true,

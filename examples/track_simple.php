@@ -1,4 +1,6 @@
 <?php
-require_once("../lib/Mixpanel.php"); // import the Mixpanel class
+
+use Mixpanel\Mixpanel;
+
 $mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN"); // instantiate the Mixpanel class
 $mp->track("login_clicked"); // track an event

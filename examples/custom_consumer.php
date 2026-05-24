@@ -1,11 +1,11 @@
 <?php
-require_once("../lib/Mixpanel.php"); // import the Mixpanel class
-require_once("consumers/ObConsumer.php"); // import the custom consumer
+
+use Mixpanel\Mixpanel;
 
 $mp = new Mixpanel("MIXPANEL_PROJECT_TOKEN", array(
     "debug"             => true,
     "max_batch_size"    => 1,
-    "consumers"         => array("ob" => "ObConsumer"),
+    "consumers"         => array("ob" => ObConsumer::class),
     "consumer"          => "ob"
 ));
 

@@ -24,7 +24,7 @@
         <script type="text/javascript">
         function loadExternalCodeSnippets() {
             Array.prototype.slice.call(document.querySelectorAll('pre[data-src]')).forEach(function (pre) {
-                var src = pre.getAttribute('data-src');
+                var src = pre.getAttribute('data-src').replace( /\\/g, '/');
                 var extension = (src.match(/\.(\w+)$/) || [, ''])[1];
                 var language = 'php';
 
@@ -87,6 +87,14 @@
 
             <div class="nav-collapse">
                 <ul class="nav pull-right">
+                                        <li class="dropdown">
+                        <a href="../index.html" class="dropdown-toggle" data-toggle="dropdown">
+                            API Documentation <b class="caret"></b>
+                        </a>
+                        <ul class="dropdown-menu">
+                                                        <li><a href="../namespaces/Mixpanel.html">\Mixpanel</a></li>
+                                                    </ul>
+                    </li>
                                         <li class="dropdown" id="charts-menu">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                             Charts <b class="caret"></b>
@@ -106,12 +114,12 @@
                         <ul class="dropdown-menu">
                             <li>
                                 <a href="../reports/errors.html">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <i class="icon-list-alt"></i>&#160;Errors <span class="label label-info pull-right">16</span>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <i class="icon-list-alt"></i>&#160;Errors <span class="label label-info pull-right">17</span>
                                 </a>
                             </li>
                             <li>
                                 <a href="../reports/markers.html">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <i class="icon-list-alt"></i>&#160;Markers <span class="label label-info pull-right">0</span>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <i class="icon-list-alt"></i>&#160;Markers <span class="label label-info pull-right">0</span>
                                 </a>
                             </li>
                             <li>
@@ -136,24 +144,93 @@
                                 <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle " data-toggle="collapse" data-target="#namespace-1206145539"></a>
+                                    <a class="accordion-toggle " data-toggle="collapse" data-target="#namespace-1914414230"></a>
                                 <a href="../namespaces/default.html" style="margin-left: 30px; padding-left: 0">\</a>
             </div>
-            <div id="namespace-1206145539" class="accordion-body collapse in">
+            <div id="namespace-1914414230" class="accordion-body collapse in">
+                <div class="accordion-inner">
+
+                                                    <div class="accordion" style="margin-bottom: 0">
+        <div class="accordion-group">
+            <div class="accordion-heading">
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1022152883"></a>
+                                <a href="../namespaces/Mixpanel.html" style="margin-left: 30px; padding-left: 0">Mixpanel</a>
+            </div>
+            <div id="namespace-1022152883" class="accordion-body collapse ">
+                <div class="accordion-inner">
+
+                                                    <div class="accordion" style="margin-bottom: 0">
+        <div class="accordion-group">
+            <div class="accordion-heading">
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-357843747"></a>
+                                <a href="../namespaces/Mixpanel.Base.html" style="margin-left: 30px; padding-left: 0">Base</a>
+            </div>
+            <div id="namespace-357843747" class="accordion-body collapse ">
                 <div class="accordion-inner">
 
                     
                     <ul>
-                                                                                                    <li class="class"><a href="../classes/Base_MixpanelBase.html">Base_MixpanelBase</a></li>
-                                                    <li class="class"><a href="../classes/ConsumerStrategies_AbstractConsumer.html">ConsumerStrategies_AbstractConsumer</a></li>
-                                                    <li class="class"><a href="../classes/ConsumerStrategies_CurlConsumer.html">ConsumerStrategies_CurlConsumer</a></li>
-                                                    <li class="class"><a href="../classes/ConsumerStrategies_FileConsumer.html">ConsumerStrategies_FileConsumer</a></li>
-                                                    <li class="class"><a href="../classes/ConsumerStrategies_SocketConsumer.html">ConsumerStrategies_SocketConsumer</a></li>
-                                                    <li class="class"><a href="../classes/Mixpanel.html">Mixpanel</a></li>
-                                                    <li class="class"><a href="../classes/Producers_MixpanelBaseProducer.html">Producers_MixpanelBaseProducer</a></li>
-                                                    <li class="class"><a href="../classes/Producers_MixpanelEvents.html">Producers_MixpanelEvents</a></li>
-                                                    <li class="class"><a href="../classes/Producers_MixpanelPeople.html">Producers_MixpanelPeople</a></li>
+                                                                                                    <li class="class"><a href="../classes/Mixpanel.Base.Base.html">Base</a></li>
                                             </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+                                                    <div class="accordion" style="margin-bottom: 0">
+        <div class="accordion-group">
+            <div class="accordion-heading">
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-2075724378"></a>
+                                <a href="../namespaces/Mixpanel.ConsumerStrategies.html" style="margin-left: 30px; padding-left: 0">ConsumerStrategies</a>
+            </div>
+            <div id="namespace-2075724378" class="accordion-body collapse ">
+                <div class="accordion-inner">
+
+                    
+                    <ul>
+                                                                                                    <li class="class"><a href="../classes/Mixpanel.ConsumerStrategies.AbstractConsumer.html">AbstractConsumer</a></li>
+                                                    <li class="class"><a href="../classes/Mixpanel.ConsumerStrategies.CurlConsumer.html">CurlConsumer</a></li>
+                                                    <li class="class"><a href="../classes/Mixpanel.ConsumerStrategies.FileConsumer.html">FileConsumer</a></li>
+                                                    <li class="class"><a href="../classes/Mixpanel.ConsumerStrategies.SocketConsumer.html">SocketConsumer</a></li>
+                                            </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+                                                    <div class="accordion" style="margin-bottom: 0">
+        <div class="accordion-group">
+            <div class="accordion-heading">
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-309888523"></a>
+                                <a href="../namespaces/Mixpanel.Producers.html" style="margin-left: 30px; padding-left: 0">Producers</a>
+            </div>
+            <div id="namespace-309888523" class="accordion-body collapse ">
+                <div class="accordion-inner">
+
+                    
+                    <ul>
+                                                                                                    <li class="class"><a href="../classes/Mixpanel.Producers.BaseProducer.html">BaseProducer</a></li>
+                                                    <li class="class"><a href="../classes/Mixpanel.Producers.EventsProducer.html">EventsProducer</a></li>
+                                                    <li class="class"><a href="../classes/Mixpanel.Producers.GroupsProducer.html">GroupsProducer</a></li>
+                                                    <li class="class"><a href="../classes/Mixpanel.Producers.PeopleProducer.html">PeopleProducer</a></li>
+                                            </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+                    
+                    <ul>
+                                                                                                    <li class="class"><a href="../classes/Mixpanel.Mixpanel.html">Mixpanel</a></li>
+                                            </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+                    
+                    <ul>
+                                                                                            </ul>
                 </div>
             </div>
         </div>
@@ -178,7 +255,7 @@
                                         <h2>Classes</h2>
                     <table class="table table-hover">
                                             <tr>
-                            <td><a href="../classes/ConsumerStrategies_CurlConsumer.html">ConsumerStrategies_CurlConsumer</a></td>
+                            <td><a href="../classes/Mixpanel.ConsumerStrategies.CurlConsumer.html">CurlConsumer</a></td>
                             <td><em>Consumes messages and sends them to a host/endpoint using cURL</em></td>
                         </tr>
                                         </table>
@@ -223,6 +300,7 @@
                                                         <h1><i class="icon-code"></i></h1>
                             <div>
                                 <ul>
+                                                                            <li><a href="../namespaces/Mixpanel.html">\Mixpanel</a></li>
                                                                     </ul>
                             </div>
                         </section>
@@ -250,7 +328,7 @@
                 <section class="span10 offset1">
                     <hr />
                     Documentation is powered by <a href="http://www.phpdoc.org/">phpDocumentor </a> and authored
-                    on July 8th, 2019 at 22:37.
+                    on November 7th, 2023 at 10:39.
                 </section>
             </section>
         </section>

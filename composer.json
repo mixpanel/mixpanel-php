@@ -1,6 +1,9 @@
 {
     "name": "mixpanel/mixpanel-php",
     "description": "The Official PHP library for Mixpanel",
+    "type": "library",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
     "keywords": [
         "mixpanel",
         "mixpanel php"
@@ -17,13 +20,27 @@
         }
     ],
     "require": {
-        "php": ">=5.0"
+        "ext-json": "*",
+        "ext-curl": "*",
+        "php": ">=7.1"
     },
     "require-dev": {
-        "phpunit/phpunit": "5.6.*",
+        "phpunit/phpunit": "^7.0",
         "phpdocumentor/phpdocumentor": "2.9.*"
     },
     "autoload": {
-        "files": ["lib/Mixpanel.php"]
+        "psr-4": {
+            "Mixpanel\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Mixpanel\\Test\\": "test/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "symfony/flex": false
+        }
     }
 }
