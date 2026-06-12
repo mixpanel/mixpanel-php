@@ -177,7 +177,7 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
             $this->_log("Making forked cURL call to $url");
         }
 
-        $exec = 'curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -d ' . escapeshellarg($data) . ' ' . escapeshellarg($url);
+        $exec = $this->_buildExecCommand($url, $data);
 
         if(!$this->_debug()) {
             $exec .= " >/dev/null 2>&1 &";
@@ -190,6 +190,19 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
         }
 
         return $return_var == 0;
+    }
+
+
+    /**
+     * Build the shell command used by the forked cURL call. The $url and $data
+     * values are passed through escapeshellarg() to prevent shell injection.
+     * @param $url
+     * @param $data
+     * @return string
+     */
+    protected function _buildExecCommand($url, $data) {
+        return 'curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -d '
+            . escapeshellarg($data) . ' ' . escapeshellarg($url);
     }
 
     /**

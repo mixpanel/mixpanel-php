@@ -57,6 +57,31 @@ class ConsumerStrategies_CurlConsumerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals($error_handler->last_code, CURLE_COULDNT_RESOLVE_HOST);
     }
 
+    public function testForkedCommandEscapesShellInjection() {
+        $consumer = new CurlConsumer(array(
+            "host"      => "localhost",
+            "endpoint"  => "/endpoint",
+            "use_ssl"   => false,
+            "fork"      => true
+        ));
+
+        // Payloads that would break out of the shell command if left unescaped.
+        $url  = 'http://localhost/endpoint"; touch /tmp/pwned; echo "';
+        $data = 'data=foo`whoami`$(id)';
+
+        $cmd = $consumer->buildExecCommand($url, $data);
+
+        // Both arguments must be passed through escapeshellarg(), so the only
+        // occurrence of each value in the command is the safely-quoted one.
+        $expected = 'curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -d '
+            . escapeshellarg($data) . ' ' . escapeshellarg($url);
+        $this->assertEquals($expected, $cmd);
+
+        // The dangerous metacharacters must live inside single quotes, never bare.
+        $this->assertNotContains('"; touch', str_replace(escapeshellarg($url), '', $cmd));
+        $this->assertNotContains('`whoami`', str_replace(escapeshellarg($data), '', $cmd));
+    }
+
     public function testOptions() {
         function callback() { }
 
@@ -146,6 +171,12 @@ class CurlConsumer extends ConsumerStrategies_CurlConsumer {
     {
         $this->forkedCalls++;
         return parent::_execute_forked($url, $data);
+    }
+
+    // Public seam exposing the protected command builder for testing.
+    public function buildExecCommand($url, $data)
+    {
+        return $this->_buildExecCommand($url, $data);
     }
 
 }
