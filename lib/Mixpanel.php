@@ -128,7 +128,7 @@ class Mixpanel extends Base_MixpanelBase {
      * @var Producers_MixpanelPeople
      */
     public $group;
- 
+
 
 
     /**
@@ -136,7 +136,7 @@ class Mixpanel extends Base_MixpanelBase {
      * @var Mixpanel[]
      */
     private static $_instances = array();
-    
+
 
     /**
      * Instantiates a new Mixpanel instance.
@@ -189,6 +189,8 @@ class Mixpanel extends Base_MixpanelBase {
      */
     public function flush($desired_batch_size = 50) {
         $this->_events->flush($desired_batch_size);
+        $this->people->flush($desired_batch_size);
+        $this->group->flush($desired_batch_size);
     }
 
 
