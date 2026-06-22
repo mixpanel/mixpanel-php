@@ -4,6 +4,7 @@ require_once(dirname(__FILE__) . "/Base/MixpanelBase.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelPeople.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelEvents.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelGroups.php");
+require_once(dirname(__FILE__) . "/FeatureFlags/MixpanelFlags.php");
 
 /**
  * This is the main class for the Mixpanel PHP Library which provides all of the methods you need to track events,
@@ -109,6 +110,11 @@ require_once(dirname(__FILE__) . "/Producers/MixpanelGroups.php");
  */
 class Mixpanel extends Base_MixpanelBase {
 
+    /**
+     * The library version, sent as lib_version on every request.
+     */
+    const VERSION = '2.11.0';
+
 
     /**
      * An instance of the MixpanelPeople class (used to create/update profiles)
@@ -128,7 +134,15 @@ class Mixpanel extends Base_MixpanelBase {
      * @var Producers_MixpanelPeople
      */
     public $group;
- 
+
+
+    /**
+     * An instance of the MixpanelFlags facade, present only when the
+     * caller passed an 'flags' entry in $options. Use it for
+     * `$mp->flags->isEnabled(...)` and similar calls.
+     * @var FeatureFlags_MixpanelFlags|null
+     */
+    public $flags;
 
 
     /**
@@ -136,7 +150,7 @@ class Mixpanel extends Base_MixpanelBase {
      * @var Mixpanel[]
      */
     private static $_instances = array();
-    
+
 
     /**
      * Instantiates a new Mixpanel instance.
@@ -148,6 +162,18 @@ class Mixpanel extends Base_MixpanelBase {
         $this->people = new Producers_MixpanelPeople($token, $options);
         $this->_events = new Producers_MixpanelEvents($token, $options);
         $this->group = new Producers_MixpanelGroups($token, $options);
+
+        if (isset($options['flags'])) {
+            $events = $this->_events;
+            // The flags providers track exposure by routing the event
+            // through the existing event queue, so it benefits from
+            // the same batching/flushing as every other tracked event.
+            $tracker = function ($distinctId, $eventName, $properties) use ($events) {
+                $properties['distinct_id'] = $distinctId;
+                $events->track($eventName, $properties);
+            };
+            $this->flags = new FeatureFlags_MixpanelFlags($token, self::VERSION, $tracker, $options);
+        }
     }
 
 

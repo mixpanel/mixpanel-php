@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Added feature flag support (local and remote evaluation) via `$mp->flags`
+- Bumped PHP minimum to 7.2 and PHPUnit dev dep to ^7.5 || ^8.5 || ^9.5
+- Added `jwadhams/json-logic-php` as a runtime dependency
+
 ## [2.11.0](https://github.com/mixpanel/mixpanel-php/tree/2.11.0) (2026-05-13)
 
 - Fix identify regex for $anon_id
