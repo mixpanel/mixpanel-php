@@ -34,7 +34,7 @@ class FeatureFlags_MixpanelRemoteFlags extends FeatureFlags_MixpanelFlagsBase {
             $this->_handleError($e->getCode(), 'Remote flag fetch failed: ' . $e->getMessage());
             return $fallback;
         }
-        $latencyMs = (microtime(true) - $startTime) * 1000.0;
+        $endTime = microtime(true);
 
         if (!isset($flags[$flagKey])) {
             $this->_lastFailureReason = self::REASON_FLAG_NOT_FOUND;
@@ -45,7 +45,11 @@ class FeatureFlags_MixpanelRemoteFlags extends FeatureFlags_MixpanelFlagsBase {
         $this->_lastFailureReason = self::REASON_OK;
 
         if ($reportExposure) {
-            $this->_trackExposure($flagKey, $selected, $context, 'remote', $latencyMs);
+            // Pass start/end so the exposure event carries
+            // "Variant fetch start time" / "Variant fetch complete
+            // time" ISO strings, matching Python/Ruby/Go/Java/Node
+            // remote-mode payloads. Latency is derived from the pair.
+            $this->_trackExposure($flagKey, $selected, $context, 'remote', null, $startTime, $endTime);
         }
 
         return $selected;

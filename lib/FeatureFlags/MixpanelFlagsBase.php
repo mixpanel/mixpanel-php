@@ -143,16 +143,31 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
     }
 
     /**
-     * Build the standard $experiment_started property set, optionally
-     * tagged with a latency measurement.
+     * Build the standard $experiment_started property set.
+     *
+     * Local mode supplies $latencyMs (derived from microtime around the
+     * in-process eval); remote mode supplies $startTime / $endTime
+     * (microtime floats around the HTTP call) and we derive latency
+     * here and emit ISO-8601 "Variant fetch start time" / "complete
+     * time" strings to match the Python, Ruby, Go, Java, Node, and
+     * Browser SDKs in remote mode.
      *
      * @param string $flagKey
      * @param FeatureFlags_MixpanelSelectedVariant $variant
      * @param string $evaluationMode 'local' or 'remote'
-     * @param float|null $latencyMs
+     * @param float|null $latencyMs   when supplied directly (local mode)
+     * @param float|null $startTime   microtime(true) before the HTTP call (remote mode)
+     * @param float|null $endTime     microtime(true) after the HTTP call (remote mode)
      * @return array
      */
-    protected function _buildExposureProperties($flagKey, FeatureFlags_MixpanelSelectedVariant $variant, $evaluationMode, $latencyMs = null) {
+    protected function _buildExposureProperties(
+        $flagKey,
+        FeatureFlags_MixpanelSelectedVariant $variant,
+        $evaluationMode,
+        $latencyMs = null,
+        $startTime = null,
+        $endTime = null
+    ) {
         $properties = array(
             'Experiment name'        => $flagKey,
             'Variant name'           => $variant->variantKey,
@@ -162,10 +177,34 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
             '$is_experiment_active'  => $variant->isExperimentActive,
             '$is_qa_tester'          => $variant->isQaTester,
         );
+        if ($startTime !== null && $endTime !== null) {
+            $properties['Variant fetch start time']    = self::_formatIsoMicrotime($startTime);
+            $properties['Variant fetch complete time'] = self::_formatIsoMicrotime($endTime);
+            if ($latencyMs === null) {
+                $latencyMs = ($endTime - $startTime) * 1000.0;
+            }
+        }
         if ($latencyMs !== null) {
             $properties['Variant fetch latency (ms)'] = $latencyMs;
         }
         return $properties;
+    }
+
+    /**
+     * Format a microtime(true) float as a local-time ISO-8601 string
+     * with microsecond precision, matching Python's
+     * `datetime.now().isoformat()` output shape so cross-SDK analytics
+     * keyed on these properties parse consistently.
+     */
+    private static function _formatIsoMicrotime($microtime) {
+        $seconds = (int) floor($microtime);
+        $micros  = (int) round(($microtime - $seconds) * 1000000);
+        if ($micros >= 1000000) {
+            // round-up edge case at the second boundary
+            $seconds += 1;
+            $micros   = 0;
+        }
+        return date('Y-m-d\TH:i:s', $seconds) . '.' . sprintf('%06d', $micros);
     }
 
     /**
@@ -182,7 +221,15 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
      * @param string $evaluationMode
      * @param float|null $latencyMs
      */
-    protected function _trackExposure($flagKey, FeatureFlags_MixpanelSelectedVariant $variant, array $context, $evaluationMode, $latencyMs = null) {
+    protected function _trackExposure(
+        $flagKey,
+        FeatureFlags_MixpanelSelectedVariant $variant,
+        array $context,
+        $evaluationMode,
+        $latencyMs = null,
+        $startTime = null,
+        $endTime = null
+    ) {
         if (!isset($context['distinct_id']) || $context['distinct_id'] === '' || $context['distinct_id'] === null) {
             // Don't drop silently — surface to the error_callback so the
             // caller learns why their exposure analytics are empty
@@ -194,7 +241,9 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
             return;
         }
         $distinctId = $context['distinct_id'];
-        $properties = $this->_buildExposureProperties($flagKey, $variant, $evaluationMode, $latencyMs);
+        $properties = $this->_buildExposureProperties(
+            $flagKey, $variant, $evaluationMode, $latencyMs, $startTime, $endTime
+        );
 
         try {
             call_user_func($this->_tracker, $distinctId, FeatureFlags_MixpanelFlagsUtils::EXPOSURE_EVENT, $properties);

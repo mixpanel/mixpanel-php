@@ -76,6 +76,14 @@ class MixpanelRemoteFlagsTest extends PHPUnit\Framework\TestCase {
         $this->assertEquals('$experiment_started', $event);
         $this->assertEquals('remote', $props['Flag evaluation mode']);
         $this->assertEquals('X', $props['$experiment_id']);
+        // Remote-mode exposure carries the ISO start/complete timestamps
+        // so PHP analytics align with Python/Ruby/Go/Java/Node remote payloads.
+        $this->assertArrayHasKey('Variant fetch start time', $props);
+        $this->assertArrayHasKey('Variant fetch complete time', $props);
+        $this->assertArrayHasKey('Variant fetch latency (ms)', $props);
+        $iso = '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}$/';
+        $this->assertEquals(1, preg_match($iso, $props['Variant fetch start time']));
+        $this->assertEquals(1, preg_match($iso, $props['Variant fetch complete time']));
     }
 
     public function testFlagMissingInResponseSetsFlagNotFoundReason() {
