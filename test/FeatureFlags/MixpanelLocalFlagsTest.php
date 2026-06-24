@@ -7,9 +7,6 @@
  * would be a foot-gun — so we reach in via a subclass here.
  */
 class _TestableLocalFlags extends FeatureFlags_MixpanelLocalFlags {
-    /** @var int count of loadDefinitions() calls — for refresh() tests */
-    public $loadCount = 0;
-
     public function setDefinitionsForTest(array $defs) {
         // Reach into private state via reflection. On PHP 8.1+
         // setAccessible() is implicit, but calling it remains harmless
@@ -25,26 +22,6 @@ class _TestableLocalFlags extends FeatureFlags_MixpanelLocalFlags {
             $readyProp->setAccessible(true);
         }
         $readyProp->setValue($this, true);
-    }
-
-    public function setLastSyncedAtForTest($ts) {
-        $reflection = new ReflectionClass('FeatureFlags_MixpanelLocalFlags');
-        $prop = $reflection->getProperty('_lastSyncedAt');
-        if (PHP_VERSION_ID < 80100) {
-            $prop->setAccessible(true);
-        }
-        $prop->setValue($this, $ts);
-    }
-
-    /**
-     * Stub loadDefinitions so refresh()-based tests don't hit the
-     * network. Counts invocations and pretends every call succeeds.
-     */
-    public function loadDefinitions() {
-        $this->loadCount++;
-        $this->setDefinitionsForTest(array());
-        $this->setLastSyncedAtForTest(time());
-        return true;
     }
 }
 
@@ -303,83 +280,5 @@ class MixpanelLocalFlagsTest extends PHPUnit\Framework\TestCase {
         $all = $this->_provider->getAllVariants(array('distinct_id' => 'u1'));
         $this->assertArrayHasKey('a', $all);
         $this->assertArrayNotHasKey('b', $all);
-    }
-
-    // ---- needsRefresh() / refresh() ----
-
-    public function testNeedsRefreshTrueBeforeFirstLoad() {
-        $p = new _TestableLocalFlags('token', '2.11.0', $this->_tracker, array(
-            'flags' => array('refresh_interval_in_seconds' => 60),
-        ));
-        $this->assertTrue($p->needsRefresh());
-    }
-
-    public function testNeedsRefreshFalseAfterFreshLoadWithinInterval() {
-        $p = new _TestableLocalFlags('token', '2.11.0', $this->_tracker, array(
-            'flags' => array('refresh_interval_in_seconds' => 60),
-        ));
-        $p->loadDefinitions();
-        $this->assertFalse($p->needsRefresh());
-    }
-
-    public function testNeedsRefreshTrueAfterIntervalElapses() {
-        $p = new _TestableLocalFlags('token', '2.11.0', $this->_tracker, array(
-            'flags' => array('refresh_interval_in_seconds' => 60),
-        ));
-        $p->loadDefinitions();
-        // Backdate lastSyncedAt past the interval.
-        $p->setLastSyncedAtForTest(time() - 120);
-        $this->assertTrue($p->needsRefresh());
-    }
-
-    public function testNeedsRefreshFalseWhenIntervalNotConfiguredEvenIfOld() {
-        $p = new _TestableLocalFlags('token', '2.11.0', $this->_tracker, array(
-            'flags' => array(),  // no refresh_interval_in_seconds
-        ));
-        $p->loadDefinitions();
-        $p->setLastSyncedAtForTest(time() - 99999);
-        $this->assertFalse($p->needsRefresh());
-    }
-
-    public function testRefreshIsNoOpWhenFresh() {
-        $p = new _TestableLocalFlags('token', '2.11.0', $this->_tracker, array(
-            'flags' => array('refresh_interval_in_seconds' => 60),
-        ));
-        $p->loadDefinitions();
-        $loadsBefore = $p->loadCount;
-        $this->assertTrue($p->refresh());
-        $this->assertEquals($loadsBefore, $p->loadCount);
-    }
-
-    public function testRefreshFetchesWhenStale() {
-        $p = new _TestableLocalFlags('token', '2.11.0', $this->_tracker, array(
-            'flags' => array('refresh_interval_in_seconds' => 60),
-        ));
-        $p->loadDefinitions();
-        $p->setLastSyncedAtForTest(time() - 120);
-        $loadsBefore = $p->loadCount;
-        $this->assertTrue($p->refresh());
-        $this->assertEquals($loadsBefore + 1, $p->loadCount);
-    }
-
-    public function testRefreshPerformsInitialFetchWhenNotYetLoaded() {
-        // No prior loadDefinitions(); refresh() should kick off the first fetch.
-        $p = new _TestableLocalFlags('token', '2.11.0', $this->_tracker, array(
-            'flags' => array('refresh_interval_in_seconds' => 60),
-        ));
-        $this->assertEquals(0, $p->loadCount);
-        $this->assertTrue($p->refresh());
-        $this->assertEquals(1, $p->loadCount);
-        $this->assertTrue($p->areFlagsReady());
-    }
-
-    public function testRefreshPerformsInitialFetchEvenWithoutConfiguredInterval() {
-        // needsRefresh() returns true when !ready regardless of interval config;
-        // refresh() should still do the initial fetch.
-        $p = new _TestableLocalFlags('token', '2.11.0', $this->_tracker, array(
-            'flags' => array(),
-        ));
-        $this->assertTrue($p->refresh());
-        $this->assertEquals(1, $p->loadCount);
     }
 }

@@ -39,18 +39,6 @@ class MixpanelFlagsTest extends PHPUnit\Framework\TestCase {
         $this->assertNull($mp->flags->lastSyncedAt());
     }
 
-    public function testRemoteModeNeedsRefreshAlwaysFalseAndRefreshIsNoOp() {
-        // Remote mode has nothing cached client-side, so the
-        // staleness/refresh API simply reports "never needs refresh"
-        // and refresh() is a no-op returning true. This lets callers
-        // write mode-agnostic code that targets either provider.
-        $mp = new Mixpanel('token-r2', array(
-            'flags' => array('mode' => 'remote', 'refresh_interval_in_seconds' => 60),
-        ));
-        $this->assertFalse($mp->flags->needsRefresh());
-        $this->assertTrue($mp->flags->refresh());
-    }
-
     public function testDefaultModeIsRemote() {
         $mp = new Mixpanel('token-default', array(
             'flags' => array(),

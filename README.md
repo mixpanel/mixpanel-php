@@ -118,9 +118,8 @@ $variant = $mp->flags->getVariant(
 );
 ```
 
-In local mode, definitions are loaded explicitly — PHP has no native threading
-and FPM/Apache processes don't survive past a single request, so the SDK can't
-run the background polling thread the other Mixpanel server SDKs use:
+In local mode, definitions are loaded explicitly — PHP's request-per-process
+model means we deliberately do not spawn background polling threads:
 
 ```php
 $mp = Mixpanel::getInstance("TOKEN", array(
@@ -129,28 +128,6 @@ $mp = Mixpanel::getInstance("TOKEN", array(
 $mp->flags->loadDefinitions();           // fetch once per process
 $enabled = $mp->flags->isEnabled("my-flag", $context);
 ```
-
-For long-running CLI workers, set `refresh_interval_in_seconds` and call
-`refresh()` in your main loop. It's a no-op until the interval elapses (and
-performs the initial fetch if `loadDefinitions()` was never called), so it's
-safe to call on every iteration:
-
-```php
-$mp = Mixpanel::getInstance("TOKEN", array(
-    "flags" => array(
-        "mode" => FeatureFlags_MixpanelFlags::MODE_LOCAL,
-        "refresh_interval_in_seconds" => 60,
-    ),
-));
-
-while ($job = $queue->next()) {
-    $mp->flags->refresh();   // re-fetches definitions when older than 60s
-    processJob($job, $mp);
-}
-```
-
-Use `needsRefresh()` if you want to make the staleness check yourself (e.g.,
-log it, schedule the refresh elsewhere).
 
 `lastFailureReason()` distinguishes the four ways an evaluation can fall
 through (`FLAG_NOT_FOUND`, `MISSING_CONTEXT_KEY`, `NO_ROLLOUT_MATCH`,
