@@ -1,14 +1,5 @@
 # Changelog
 
-## Unreleased
-
-- Added feature flag support (local and remote evaluation) via `$mp->flags`
-- Bumped PHP minimum to 7.2 and PHPUnit dev dep to ^7.5 || ^8.5 || ^9.5
-- Added two composer dependencies (only pulled in when this version is installed):
-  - `jwadhams/json-logic-php` — for runtime rule evaluation in local mode
-  - `symfony/polyfill-mbstring` — Unicode case folding for runtime rules; no-op when `ext-mbstring` is present
-- No new PHP extension requirements: FNV-1a bucketing uses PHP's built-in `hash('fnv1a64', …)` from core `ext-hash`, and case folding falls through to the polyfill on hosts without `ext-mbstring`
-
 ## [2.11.0](https://github.com/mixpanel/mixpanel-php/tree/2.11.0) (2026-05-13)
 
 - Fix identify regex for $anon_id
