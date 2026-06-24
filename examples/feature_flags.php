@@ -62,10 +62,25 @@ foreach ($all as $key => $v) {
 //   $mp->flags->loadDefinitions();   // fetch once per process
 //   $variant = $mp->flags->getVariant("my-flag", $fallback, $context);
 //
-// In long-running CLI workers you can call loadDefinitions() on
-// whatever schedule fits (e.g., every N minutes). The PHP SDK does not
-// spawn background polling threads — request-per-process FPM/Apache
-// deployments don't have a place to host them.
+// In long-running CLI workers, set "refresh_interval_in_seconds" and
+// call $mp->flags->refresh() in your main loop. refresh() is a no-op
+// until the interval elapses (and performs the initial fetch if
+// loadDefinitions hasn't run), so it's safe on every iteration:
+//
+//   $mp = Mixpanel::getInstance("MY_TOKEN", array(
+//       "flags" => array(
+//           "mode" => FeatureFlags_MixpanelFlags::MODE_LOCAL,
+//           "refresh_interval_in_seconds" => 60,
+//       ),
+//   ));
+//   while ($job = $queue->next()) {
+//       $mp->flags->refresh();
+//       processJob($job);
+//   }
+//
+// PHP can't spawn background polling threads like Python/Ruby/Go/Java/
+// Node, so refresh() is the closest analog — synchronous, driven by
+// the worker's main loop instead of a background thread.
 
 $mp->flags->shutdown();
 $mp->flush();

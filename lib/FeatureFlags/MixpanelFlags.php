@@ -89,6 +89,34 @@ class FeatureFlags_MixpanelFlags {
         return true;
     }
 
+    /**
+     * Local mode: true if cached definitions are missing or older
+     * than `refresh_interval_in_seconds`. Remote mode: always false
+     * (definitions aren't cached client-side).
+     *
+     * @return bool
+     */
+    public function needsRefresh() {
+        if ($this->_provider instanceof FeatureFlags_MixpanelLocalFlags) {
+            return $this->_provider->needsRefresh();
+        }
+        return false;
+    }
+
+    /**
+     * Local mode: fetch definitions only when needsRefresh() returns
+     * true. Safe to call on every iteration of a worker loop. Remote
+     * mode: no-op (returns true).
+     *
+     * @return bool
+     */
+    public function refresh() {
+        if ($this->_provider instanceof FeatureFlags_MixpanelLocalFlags) {
+            return $this->_provider->refresh();
+        }
+        return true;
+    }
+
     /** @return bool */
     public function areFlagsReady() {
         if ($this->_provider instanceof FeatureFlags_MixpanelLocalFlags) {

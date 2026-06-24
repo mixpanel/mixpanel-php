@@ -8,10 +8,13 @@ require_once(dirname(__FILE__) . "/MixpanelFlagsBase.php");
  * call against the cached definitions using the same FNV-1a + JSON
  * Logic algorithms as every other Mixpanel SDK.
  *
- * PHP's request-per-process model means we deliberately do NOT run a
- * background polling thread (the Ruby SDK's poller was the source of
- * the daemon-thread bug — audit finding #2). Long-lived CLI workers
- * can call loadDefinitions() on whatever schedule they like.
+ * PHP has no native threading and FPM/Apache processes don't survive
+ * past a single request, so this SDK deliberately omits the background
+ * polling thread that the Python, Ruby, Go, Java, and Node server SDKs
+ * use to refresh definitions. Long-lived CLI workers should instead
+ * configure `refresh_interval_in_seconds` and call refresh() inside
+ * their main loop — refresh() is a no-op until that interval elapses,
+ * so it's safe to call on every iteration.
  */
 class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
 
@@ -25,6 +28,67 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
 
     /** @var int|null unix timestamp of last successful loadDefinitions */
     private $_lastSyncedAt = null;
+
+    /**
+     * @var int|null seconds after which cached definitions are
+     * considered stale. null = no staleness check; refresh() does
+     * nothing in that case and the caller must manage refreshes via
+     * loadDefinitions() directly.
+     */
+    private $_refreshInterval = null;
+
+    public function __construct($token, $version, $tracker, array $options) {
+        parent::__construct($token, $version, $tracker, $options);
+        $flagsOpts = isset($options['flags']) && is_array($options['flags']) ? $options['flags'] : array();
+        if (isset($flagsOpts['refresh_interval_in_seconds'])) {
+            $val = (int) $flagsOpts['refresh_interval_in_seconds'];
+            // Treat 0/negative as "always stale" (refresh fetches on
+            // every call) only if the caller explicitly set it; null
+            // means "no staleness behavior at all."
+            $this->_refreshInterval = max(0, $val);
+        }
+    }
+
+    /**
+     * Whether cached definitions are missing or older than the
+     * configured refresh interval. Always returns true when
+     * loadDefinitions() has never succeeded; returns false in remote
+     * mode (the facade forwards there) since there's nothing cached
+     * to go stale.
+     *
+     * @return bool
+     */
+    public function needsRefresh() {
+        if (!$this->_ready) {
+            return true;
+        }
+        if ($this->_refreshInterval === null) {
+            // Customer opted out of staleness checks — definitions
+            // are considered fresh until they explicitly reload.
+            return false;
+        }
+        if ($this->_lastSyncedAt === null) {
+            return true;
+        }
+        return (time() - $this->_lastSyncedAt) >= $this->_refreshInterval;
+    }
+
+    /**
+     * Convenience for long-running workers: call inside the main loop
+     * and the SDK refreshes definitions only when they're missing or
+     * past the configured `refresh_interval_in_seconds`. Returns true
+     * when definitions are usable after the call (either already
+     * fresh, or freshly fetched); false when a fetch was attempted
+     * and failed.
+     *
+     * @return bool
+     */
+    public function refresh() {
+        if (!$this->needsRefresh()) {
+            return true;
+        }
+        return $this->loadDefinitions();
+    }
 
     /**
      * Fetch the latest flag definitions from Mixpanel. Throws nothing
