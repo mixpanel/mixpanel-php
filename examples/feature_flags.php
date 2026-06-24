@@ -4,7 +4,9 @@ require __DIR__ . '/../vendor/autoload.php';
 // Replace with your project token.
 $mp = Mixpanel::getInstance("MY_TOKEN", array(
     "flags" => array(
-        "mode"             => "remote", // 'local' or 'remote'
+        // Either the MODE_* constants or the raw strings 'local' /
+        // 'remote' are accepted.
+        "mode"             => FeatureFlags_MixpanelFlags::MODE_REMOTE,
         "report_exposure"  => true,
     ),
 ));
@@ -55,7 +57,7 @@ foreach ($all as $key => $v) {
 // Local mode usage:
 //
 //   $mp = Mixpanel::getInstance("MY_TOKEN", array(
-//       "flags" => array("mode" => "local"),
+//       "flags" => array("mode" => FeatureFlags_MixpanelFlags::MODE_LOCAL),
 //   ));
 //   $mp->flags->loadDefinitions();   // fetch once per process
 //   $variant = $mp->flags->getVariant("my-flag", $fallback, $context);

@@ -88,7 +88,9 @@ once per process and evaluates in-process).
 ```php
 $mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN", array(
     "flags" => array(
-        "mode"             => "remote", // or "local"
+        // Mode accepts the MODE_* class constants or the raw strings
+        // "remote" / "local" — both are equivalent.
+        "mode"             => FeatureFlags_MixpanelFlags::MODE_REMOTE,
         "report_exposure"  => true,
     ),
 ));
@@ -120,7 +122,9 @@ In local mode, definitions are loaded explicitly — PHP's request-per-process
 model means we deliberately do not spawn background polling threads:
 
 ```php
-$mp = Mixpanel::getInstance("TOKEN", array("flags" => array("mode" => "local")));
+$mp = Mixpanel::getInstance("TOKEN", array(
+    "flags" => array("mode" => FeatureFlags_MixpanelFlags::MODE_LOCAL),
+));
 $mp->flags->loadDefinitions();           // fetch once per process
 $enabled = $mp->flags->isEnabled("my-flag", $context);
 ```

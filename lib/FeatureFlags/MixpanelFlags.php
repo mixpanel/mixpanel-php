@@ -11,7 +11,7 @@ require_once(dirname(__FILE__) . "/MixpanelRemoteFlags.php");
  * Usage:
  *
  *   $mp = Mixpanel::getInstance('TOKEN', array(
- *       'flags' => array('mode' => 'remote'),
+ *       'flags' => array('mode' => FeatureFlags_MixpanelFlags::MODE_REMOTE),
  *   ));
  *   $enabled = $mp->flags->isEnabled('my-flag', array(
  *       'distinct_id' => 'user-123',
@@ -19,10 +19,19 @@ require_once(dirname(__FILE__) . "/MixpanelRemoteFlags.php");
  */
 class FeatureFlags_MixpanelFlags {
 
+    /**
+     * Evaluation mode values for the `mode` config key. PHP 7.x has no
+     * native enums, but these constants give callers an IDE-checkable,
+     * grep-able alternative to bare string literals. The raw strings
+     * remain valid input — these are exact aliases.
+     */
+    const MODE_LOCAL  = 'local';
+    const MODE_REMOTE = 'remote';
+
     /** @var FeatureFlags_MixpanelFlagsBase */
     private $_provider;
 
-    /** @var string */
+    /** @var string one of the MODE_* constants */
     private $_mode;
 
     public function __construct($token, $version, $tracker, array $options) {
@@ -44,9 +53,9 @@ class FeatureFlags_MixpanelFlags {
         }
 
         $flagsOpts = isset($options['flags']) && is_array($options['flags']) ? $options['flags'] : array();
-        $this->_mode = isset($flagsOpts['mode']) ? strtolower((string) $flagsOpts['mode']) : 'remote';
+        $this->_mode = isset($flagsOpts['mode']) ? strtolower((string) $flagsOpts['mode']) : self::MODE_REMOTE;
 
-        if ($this->_mode === 'local') {
+        if ($this->_mode === self::MODE_LOCAL) {
             $this->_provider = new FeatureFlags_MixpanelLocalFlags($token, $version, $tracker, $options);
         } else {
             $this->_provider = new FeatureFlags_MixpanelRemoteFlags($token, $version, $tracker, $options);

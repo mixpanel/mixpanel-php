@@ -46,6 +46,27 @@ class MixpanelFlagsTest extends PHPUnit\Framework\TestCase {
         $this->assertEquals('remote', $mp->flags->getMode());
     }
 
+    public function testModeConstantsAreStable() {
+        // The MODE_* constants are part of the public API; lock their
+        // string values so a refactor can't silently change them and
+        // break callers that compare against them.
+        $this->assertSame('local',  FeatureFlags_MixpanelFlags::MODE_LOCAL);
+        $this->assertSame('remote', FeatureFlags_MixpanelFlags::MODE_REMOTE);
+    }
+
+    public function testModeAcceptsConstantOrStringLiteral() {
+        $viaConstant = new Mixpanel('token-c', array(
+            'flags' => array('mode' => FeatureFlags_MixpanelFlags::MODE_LOCAL),
+        ));
+        $viaLiteral = new Mixpanel('token-l', array(
+            'flags' => array('mode' => 'local'),
+        ));
+        $this->assertEquals('local', $viaConstant->flags->getMode());
+        $this->assertEquals('local', $viaLiteral->flags->getMode());
+        $this->assertInstanceOf('FeatureFlags_MixpanelLocalFlags', $viaConstant->flags->getProvider());
+        $this->assertInstanceOf('FeatureFlags_MixpanelLocalFlags', $viaLiteral->flags->getProvider());
+    }
+
     public function testFlagsApiHostInheritsFromTopLevelHost() {
         // If the caller already pointed the SDK at a regional or mock
         // endpoint via the top-level `host` option, the flags module
