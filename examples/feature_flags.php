@@ -6,8 +6,7 @@ $mp = Mixpanel::getInstance("MY_TOKEN", array(
     "flags" => array(
         // Either the MODE_* constants or the raw strings 'local' /
         // 'remote' are accepted.
-        "mode"             => FeatureFlags_MixpanelFlags::MODE_REMOTE,
-        "report_exposure"  => true,
+        "mode" => FeatureFlags_MixpanelFlags::MODE_REMOTE,
     ),
 ));
 

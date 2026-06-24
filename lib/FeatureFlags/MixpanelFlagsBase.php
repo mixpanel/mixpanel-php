@@ -40,12 +40,6 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
     /** @var int seconds */
     protected $_requestTimeout;
 
-    /** @var int seconds */
-    protected $_connectTimeout;
-
-    /** @var bool */
-    protected $_reportExposureDefault;
-
     /** @var string most recent evaluation outcome */
     protected $_lastFailureReason = self::REASON_OK;
 
@@ -68,8 +62,6 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
             $this->_apiHost = 'api.mixpanel.com';
         }
         $this->_requestTimeout = isset($flagsOpts['request_timeout_in_seconds']) ? (int) $flagsOpts['request_timeout_in_seconds'] : 10;
-        $this->_connectTimeout = isset($flagsOpts['connect_timeout_in_seconds']) ? (int) $flagsOpts['connect_timeout_in_seconds'] : 5;
-        $this->_reportExposureDefault = isset($flagsOpts['report_exposure']) ? (bool) $flagsOpts['report_exposure'] : true;
     }
 
     /** @return string one of the REASON_* constants */
@@ -113,7 +105,10 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->_connectTimeout);
+        // Single timeout budget for the whole call, matching the other
+        // server SDKs (httpx in Python, Net::HTTP in Ruby, http.Client
+        // in Go all use one timeout covering connect + read).
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->_requestTimeout);
         curl_setopt($ch, CURLOPT_TIMEOUT, $this->_requestTimeout);
         $body = curl_exec($ch);
         $errno = curl_errno($ch);
@@ -267,7 +262,7 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
         }
     }
 
-    abstract public function getVariant($flagKey, FeatureFlags_MixpanelSelectedVariant $fallback, array $context, $reportExposure = null);
+    abstract public function getVariant($flagKey, FeatureFlags_MixpanelSelectedVariant $fallback, array $context, $reportExposure = true);
 
     public function getVariantValue($flagKey, $fallbackValue, array $context) {
         $fallback = new FeatureFlags_MixpanelSelectedVariant(null, $fallbackValue);

@@ -19,8 +19,8 @@ class FeatureFlags_MixpanelRemoteFlags extends FeatureFlags_MixpanelFlagsBase {
         return 'remote';
     }
 
-    public function getVariant($flagKey, FeatureFlags_MixpanelSelectedVariant $fallback, array $context, $reportExposure = null) {
-        $reportExposure = $reportExposure === null ? $this->_reportExposureDefault : (bool) $reportExposure;
+    public function getVariant($flagKey, FeatureFlags_MixpanelSelectedVariant $fallback, array $context, $reportExposure = true) {
+        $reportExposure = (bool) $reportExposure;
 
         $startTime = microtime(true);
         try {

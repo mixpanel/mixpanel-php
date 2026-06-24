@@ -110,7 +110,7 @@ class FeatureFlags_MixpanelFlags {
         return $this->_provider->lastFailureReason();
     }
 
-    public function getVariant($flagKey, FeatureFlags_MixpanelSelectedVariant $fallback, array $context, $reportExposure = null) {
+    public function getVariant($flagKey, FeatureFlags_MixpanelSelectedVariant $fallback, array $context, $reportExposure = true) {
         return $this->_provider->getVariant($flagKey, $fallback, $context, $reportExposure);
     }
 

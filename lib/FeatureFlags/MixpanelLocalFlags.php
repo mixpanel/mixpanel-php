@@ -80,8 +80,8 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
         return 'local';
     }
 
-    public function getVariant($flagKey, FeatureFlags_MixpanelSelectedVariant $fallback, array $context, $reportExposure = null) {
-        $reportExposure = $reportExposure === null ? $this->_reportExposureDefault : (bool) $reportExposure;
+    public function getVariant($flagKey, FeatureFlags_MixpanelSelectedVariant $fallback, array $context, $reportExposure = true) {
+        $reportExposure = (bool) $reportExposure;
         $startTime = microtime(true);
 
         if (!$this->_ready) {
