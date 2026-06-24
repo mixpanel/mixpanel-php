@@ -35,23 +35,10 @@ class FeatureFlags_MixpanelFlags {
     private $_mode;
 
     public function __construct($token, $version, $tracker, array $options) {
-        // Check required extensions only when flags are actually
-        // enabled — pre-flags the SDK degraded gracefully on hosts
-        // without bcmath/curl/mbstring, and we want to preserve that
-        // for tracking-only callers.
-        $missing = array();
-        foreach (array('bcmath', 'curl', 'mbstring') as $ext) {
-            if (!extension_loaded($ext)) {
-                $missing[] = $ext;
-            }
-        }
-        if (!empty($missing)) {
-            throw new Exception(
-                'The Mixpanel feature flags module requires the following PHP extension(s): '
-                . implode(', ', $missing)
-            );
-        }
-
+        // No extension checks — FNV-1a hashing uses PHP's built-in
+        // ext-hash (bundled in core), case folding uses
+        // symfony/polyfill-mbstring (composer dep), HTTP uses the
+        // existing CurlConsumer which already runtime-checks ext-curl.
         $flagsOpts = isset($options['flags']) && is_array($options['flags']) ? $options['flags'] : array();
         $this->_mode = isset($flagsOpts['mode']) ? strtolower((string) $flagsOpts['mode']) : self::MODE_REMOTE;
 

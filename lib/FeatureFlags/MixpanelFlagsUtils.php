@@ -10,53 +10,31 @@ class FeatureFlags_MixpanelFlagsUtils {
 
     const EXPOSURE_EVENT = '$experiment_started';
 
-    // FNV-1a 64-bit constants, as decimal strings so bcmath can use them
-    // on every PHP build regardless of int width.
-    // FNV_OFFSET_BASIS = 0xCBF29CE484222325
-    // FNV_PRIME        = 0x100000001B3
-    // MASK64           = 2^64
-    const FNV_OFFSET_BASIS = '14695981039346656037';
-    const FNV_PRIME        = '1099511628211';
-    const MASK64           = '18446744073709551616';
-
     /**
      * Returns the hash of ($key . $salt) normalized to a [0.0, 1.0)
      * float by taking (hash mod 100) / 100. Must match the equivalent
      * function in every other Mixpanel SDK so the same user lands in
      * the same bucket across languages.
      *
+     * Implementation note: we use PHP's built-in FNV-1a 64 from ext-hash
+     * (bundled in core, present on every PHP install) and compute the
+     * mod-100 by walking the 8 raw bytes. That avoids needing bcmath
+     * or any other big-int facility while staying exact on 32-bit PHP.
+     *
      * @param string $key
      * @param string $salt
      * @return float
      */
     public static function normalizedHash($key, $salt) {
-        $hashValue = self::fnv1a64($key . $salt);
-        $mod = (int) bcmod($hashValue, '100');
-        return $mod / 100.0;
-    }
-
-    /**
-     * FNV-1a 64-bit hash. Returns the digest as a decimal string so
-     * callers can safely modulo even on 32-bit PHP builds.
-     *
-     * @param string $data raw bytes (PHP strings are byte sequences)
-     * @return string decimal representation of the 64-bit unsigned digest
-     */
-    public static function fnv1a64($data) {
-        $hash = self::FNV_OFFSET_BASIS;
-        $length = strlen($data);
-        for ($i = 0; $i < $length; $i++) {
-            $byte = ord($data[$i]);
-            // hash ^= byte: XOR with a byte affects only the low 8 bits.
-            // Pull out the low byte, XOR, and stitch the value back.
-            $lowByte = (int) bcmod($hash, '256');
-            $newLowByte = $lowByte ^ $byte;
-            $hash = bcadd(bcsub($hash, (string) $lowByte), (string) $newLowByte);
-
-            // hash = (hash * FNV_PRIME) mod 2^64
-            $hash = bcmod(bcmul($hash, self::FNV_PRIME), self::MASK64);
+        $raw = hash('fnv1a64', $key . $salt, true);  // 8 raw bytes, big-endian
+        // (uint64 mod 100), byte by byte. Each intermediate
+        // (mod*256 + byte) is at most 99*256 + 255 = 25599 — fits in
+        // 32-bit signed int on every PHP build, no overflow.
+        $mod = 0;
+        for ($i = 0; $i < 8; $i++) {
+            $mod = ($mod * 256 + ord($raw[$i])) % 100;
         }
-        return $hash;
+        return $mod / 100.0;
     }
 
     /**

@@ -1,41 +1,21 @@
 <?php
 
 /**
- * Hash determinism tests. The values below were generated with the
- * Python implementation in mixpanel-python/mixpanel/flags/utils.py
- * to verify cross-language parity — a PHP user and a Python user with
- * the same distinct_id must land in the same bucket.
- *
- * Reproduce with:
- *   from mixpanel.flags.utils import normalized_hash, _fnv1a64
- *   _fnv1a64(b"user-123myflagvariant")
- *   normalized_hash("user-123", "myflagvariant")
+ * Hash determinism tests. The canonical FNV-1a 64 reference vectors
+ * below verify that PHP's built-in `hash('fnv1a64', …)` (which we use
+ * for bucketing) returns the same values every other Mixpanel SDK
+ * computes via its own FNV-1a implementation. If this ever drifts, the
+ * same user would land in different rollout buckets across languages.
  */
 class MixpanelFlagsUtilsTest extends PHPUnit\Framework\TestCase {
 
-    public function testFnvOfEmptyStringIsOffsetBasis() {
-        $this->assertEquals(
-            FeatureFlags_MixpanelFlagsUtils::FNV_OFFSET_BASIS,
-            FeatureFlags_MixpanelFlagsUtils::fnv1a64('')
-        );
-    }
-
-    public function testFnvSingleByteAMatchesCanonicalVector() {
-        // RFC-style FNV-1a 64 of "a" is 0xaf63dc4c8601ec8c. This is the
-        // canonical cross-language reference value — if we don't match
-        // it, no other Mixpanel SDK will agree with PHP on bucketing.
-        $this->assertEquals(
-            '12638187200555641996',
-            FeatureFlags_MixpanelFlagsUtils::fnv1a64('a')
-        );
-    }
-
-    public function testFnvFoobarMatchesCanonicalVector() {
-        // FNV-1a 64 of "foobar" = 0x85944171f73967e8 per the reference vectors.
-        $this->assertEquals(
-            '9625390261332436968',
-            FeatureFlags_MixpanelFlagsUtils::fnv1a64('foobar')
-        );
+    public function testBuiltinFnv1a64MatchesCanonicalVectors() {
+        // FNV offset basis: the hash of the empty string.
+        $this->assertSame('cbf29ce484222325', hash('fnv1a64', ''));
+        // 0xaf63dc4c8601ec8c — canonical reference value for "a".
+        $this->assertSame('af63dc4c8601ec8c', hash('fnv1a64', 'a'));
+        // 0x85944171f73967e8 — canonical reference value for "foobar".
+        $this->assertSame('85944171f73967e8', hash('fnv1a64', 'foobar'));
     }
 
     public function testNormalizedHashInRange() {
