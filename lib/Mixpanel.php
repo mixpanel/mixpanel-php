@@ -111,9 +111,29 @@ require_once(dirname(__FILE__) . "/FeatureFlags/MixpanelFlags.php");
 class Mixpanel extends Base_MixpanelBase {
 
     /**
-     * The library version, sent as lib_version on every request.
+     * Resolve the installed SDK version from Composer's runtime API.
+     * Used to populate the `lib_version` query param on feature-flag
+     * HTTP requests (matching Python/Ruby/Go/Java/Node).
+     *
+     * Composer 2.x ships `\Composer\InstalledVersions` in every install
+     * and returns the tag the package was installed from — so this
+     * stays accurate without any release-time bumping. Falls back to
+     * "unknown" on the off chance the package was loaded outside of a
+     * Composer-managed environment.
      */
-    const VERSION = '2.11.0';
+    private static function _resolveLibVersion() {
+        if (class_exists('\Composer\InstalledVersions')) {
+            try {
+                $version = \Composer\InstalledVersions::getVersion('mixpanel/mixpanel-php');
+                if ($version !== null && $version !== '') {
+                    return $version;
+                }
+            } catch (\Throwable $e) {
+                // fall through to "unknown"
+            }
+        }
+        return 'unknown';
+    }
 
 
     /**
@@ -172,7 +192,7 @@ class Mixpanel extends Base_MixpanelBase {
                 $properties['distinct_id'] = $distinctId;
                 $events->track($eventName, $properties);
             };
-            $this->flags = new FeatureFlags_MixpanelFlags($token, self::VERSION, $tracker, $options);
+            $this->flags = new FeatureFlags_MixpanelFlags($token, self::_resolveLibVersion(), $tracker, $options);
         }
     }
 
