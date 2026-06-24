@@ -86,30 +86,27 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
 
         if (!$this->_ready) {
             // Distinguish "definitions never loaded" from "definitions
-            // loaded but flag not present" — the audit-driven reason
-            // enum is the seam a future OpenFeature wrapper uses.
-            $this->_lastFailureReason = self::REASON_NOT_READY;
+            // loaded but flag not present" — the per-variant reason is
+            // the seam a future OpenFeature wrapper uses.
             $this->_handleError(
                 'mixpanel-flags',
                 "getVariant called before loadDefinitions() succeeded; call loadDefinitions() first."
             );
-            return $fallback;
+            return $fallback->withFallbackReason(FeatureFlags_MixpanelSelectedVariant::REASON_NOT_READY);
         }
 
         if (!isset($this->_definitions[$flagKey])) {
-            $this->_lastFailureReason = self::REASON_FLAG_NOT_FOUND;
-            return $fallback;
+            return $fallback->withFallbackReason(FeatureFlags_MixpanelSelectedVariant::REASON_FLAG_NOT_FOUND);
         }
 
         $flag = $this->_definitions[$flagKey];
         $bucketingKey = isset($flag['context']) ? $flag['context'] : 'distinct_id';
         if (!isset($context[$bucketingKey]) || $context[$bucketingKey] === '' || $context[$bucketingKey] === null) {
-            $this->_lastFailureReason = self::REASON_MISSING_CONTEXT_KEY;
             $this->_handleError(
                 'mixpanel-flags',
                 "Flag '{$flagKey}' requires context key '{$bucketingKey}' which was not supplied"
             );
-            return $fallback;
+            return $fallback->withFallbackReason(FeatureFlags_MixpanelSelectedVariant::REASON_MISSING_CONTEXT_KEY);
         }
         $contextValue = (string) $context[$bucketingKey];
 
@@ -124,11 +121,8 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
         }
 
         if ($selected === null) {
-            $this->_lastFailureReason = self::REASON_NO_ROLLOUT_MATCH;
-            return $fallback;
+            return $fallback->withFallbackReason(FeatureFlags_MixpanelSelectedVariant::REASON_NO_ROLLOUT_MATCH);
         }
-
-        $this->_lastFailureReason = self::REASON_OK;
 
         if ($reportExposure) {
             $latencyMs = (microtime(true) - $startTime) * 1000.0;

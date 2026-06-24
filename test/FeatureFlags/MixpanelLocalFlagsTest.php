@@ -85,11 +85,13 @@ class MixpanelLocalFlagsTest extends PHPUnit\Framework\TestCase {
         $this->_provider->setDefinitionsForTest(array());
         $fallback = new FeatureFlags_MixpanelSelectedVariant(null, 'fallback');
         $result = $this->_provider->getVariant('unknown', $fallback, array('distinct_id' => 'u1'));
-        $this->assertSame($fallback, $result);
+        $this->assertEquals('fallback', $result->variantValue);
         $this->assertEquals(
-            FeatureFlags_MixpanelFlagsBase::REASON_FLAG_NOT_FOUND,
-            $this->_provider->lastFailureReason()
+            FeatureFlags_MixpanelSelectedVariant::REASON_FLAG_NOT_FOUND,
+            $result->fallbackReason
         );
+        // The caller's fallback object must not be mutated — we return a clone.
+        $this->assertNull($fallback->fallbackReason);
     }
 
     public function testGetVariantBeforeLoadReturnsNotReady() {
@@ -99,10 +101,10 @@ class MixpanelLocalFlagsTest extends PHPUnit\Framework\TestCase {
         ));
         $fallback = new FeatureFlags_MixpanelSelectedVariant(null, 'fb');
         $result = $fresh->getVariant('any-flag', $fallback, array('distinct_id' => 'u1'));
-        $this->assertSame($fallback, $result);
+        $this->assertEquals('fb', $result->variantValue);
         $this->assertEquals(
-            FeatureFlags_MixpanelFlagsBase::REASON_NOT_READY,
-            $fresh->lastFailureReason()
+            FeatureFlags_MixpanelSelectedVariant::REASON_NOT_READY,
+            $result->fallbackReason
         );
     }
 
@@ -113,10 +115,10 @@ class MixpanelLocalFlagsTest extends PHPUnit\Framework\TestCase {
         $fallback = new FeatureFlags_MixpanelSelectedVariant(null, 'fallback');
         // No distinct_id in context, but the flag's bucketing key IS distinct_id.
         $result = $this->_provider->getVariant('my-flag', $fallback, array('email' => 'x@y.com'));
-        $this->assertSame($fallback, $result);
+        $this->assertEquals('fallback', $result->variantValue);
         $this->assertEquals(
-            FeatureFlags_MixpanelFlagsBase::REASON_MISSING_CONTEXT_KEY,
-            $this->_provider->lastFailureReason()
+            FeatureFlags_MixpanelSelectedVariant::REASON_MISSING_CONTEXT_KEY,
+            $result->fallbackReason
         );
     }
 
@@ -130,7 +132,8 @@ class MixpanelLocalFlagsTest extends PHPUnit\Framework\TestCase {
         $this->assertSame(true, $result->variantValue);
         $this->assertEquals('exp-my-flag', $result->experimentId);
         $this->assertTrue($result->isExperimentActive);
-        $this->assertEquals(FeatureFlags_MixpanelFlagsBase::REASON_OK, $this->_provider->lastFailureReason());
+        // null fallbackReason means evaluation succeeded — no fallback used.
+        $this->assertNull($result->fallbackReason);
     }
 
     public function testTracksExposureByDefault() {
@@ -172,10 +175,10 @@ class MixpanelLocalFlagsTest extends PHPUnit\Framework\TestCase {
         ));
         $fallback = new FeatureFlags_MixpanelSelectedVariant(null, 'fallback');
         $result = $this->_provider->getVariant('my-flag', $fallback, array('distinct_id' => 'u1'));
-        $this->assertSame($fallback, $result);
+        $this->assertEquals('fallback', $result->variantValue);
         $this->assertEquals(
-            FeatureFlags_MixpanelFlagsBase::REASON_NO_ROLLOUT_MATCH,
-            $this->_provider->lastFailureReason()
+            FeatureFlags_MixpanelSelectedVariant::REASON_NO_ROLLOUT_MATCH,
+            $result->fallbackReason
         );
     }
 
@@ -255,10 +258,10 @@ class MixpanelLocalFlagsTest extends PHPUnit\Framework\TestCase {
 
         $fallback = new FeatureFlags_MixpanelSelectedVariant(null, false);
         $result = $this->_provider->getVariant('rt-flag', $fallback, array('distinct_id' => 'u1'), false);
-        $this->assertSame($fallback, $result);
+        $this->assertSame(false, $result->variantValue);
         $this->assertEquals(
-            FeatureFlags_MixpanelFlagsBase::REASON_NO_ROLLOUT_MATCH,
-            $this->_provider->lastFailureReason()
+            FeatureFlags_MixpanelSelectedVariant::REASON_NO_ROLLOUT_MATCH,
+            $result->fallbackReason
         );
     }
 

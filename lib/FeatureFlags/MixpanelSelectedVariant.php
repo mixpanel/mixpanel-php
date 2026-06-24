@@ -7,12 +7,24 @@
  * downstream wrappers (a future OpenFeature provider) and analytics
  * tooling can rely on the same field names across languages.
  *
- * The `experiment_id`, `is_experiment_active`, and `is_qa_tester`
- * fields are kept available so a future OpenFeature wrapper can
- * forward them as `flag_metadata` — addressing finding "Design C" in
- * the audit (other wrappers throw this metadata away).
+ * The `experimentId`, `isExperimentActive`, and `isQaTester` fields are
+ * kept available so a future OpenFeature wrapper can forward them as
+ * `flag_metadata` — addressing finding "Design C" in the cross-SDK
+ * audit (other wrappers throw this metadata away).
+ *
+ * `fallbackReason` is `null` when evaluation succeeded; when the SDK
+ * returns the fallback you passed in, it's set to one of the REASON_*
+ * constants below so the caller (or a future OpenFeature wrapper) can
+ * distinguish flag-not-found from missing-context-key from no-rollout-
+ * match etc. — addressing audit finding #1.
  */
 class FeatureFlags_MixpanelSelectedVariant {
+
+    const REASON_FLAG_NOT_FOUND      = 'FLAG_NOT_FOUND';
+    const REASON_MISSING_CONTEXT_KEY = 'MISSING_CONTEXT_KEY';
+    const REASON_NO_ROLLOUT_MATCH    = 'NO_ROLLOUT_MATCH';
+    const REASON_BACKEND_ERROR       = 'BACKEND_ERROR';
+    const REASON_NOT_READY           = 'NOT_READY';
 
     /** @var string|null variant key — null when this instance is a fallback */
     public $variantKey;
@@ -29,18 +41,23 @@ class FeatureFlags_MixpanelSelectedVariant {
     /** @var bool|null */
     public $isQaTester;
 
+    /** @var string|null null on success; one of the REASON_* constants when the fallback was returned */
+    public $fallbackReason;
+
     public function __construct(
         $variantKey = null,
         $variantValue = null,
         $experimentId = null,
         $isExperimentActive = null,
-        $isQaTester = null
+        $isQaTester = null,
+        $fallbackReason = null
     ) {
         $this->variantKey = $variantKey;
         $this->variantValue = $variantValue;
         $this->experimentId = $experimentId;
         $this->isExperimentActive = $isExperimentActive;
         $this->isQaTester = $isQaTester;
+        $this->fallbackReason = $fallbackReason;
     }
 
     /**
@@ -61,6 +78,20 @@ class FeatureFlags_MixpanelSelectedVariant {
     }
 
     /**
+     * Return a copy of this variant with the supplied fallbackReason
+     * set. Used by the providers to tag the caller's fallback without
+     * mutating their object.
+     *
+     * @param string $reason one of the REASON_* constants
+     * @return FeatureFlags_MixpanelSelectedVariant
+     */
+    public function withFallbackReason($reason) {
+        $clone = clone $this;
+        $clone->fallbackReason = $reason;
+        return $clone;
+    }
+
+    /**
      * @return array
      */
     public function toArray() {
@@ -70,6 +101,7 @@ class FeatureFlags_MixpanelSelectedVariant {
             'experiment_id'        => $this->experimentId,
             'is_experiment_active' => $this->isExperimentActive,
             'is_qa_tester'         => $this->isQaTester,
+            'fallback_reason'      => $this->fallbackReason,
         );
     }
 }

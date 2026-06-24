@@ -128,9 +128,11 @@ $mp->flags->loadDefinitions();           // fetch once per process
 $enabled = $mp->flags->isEnabled("my-flag", $context);
 ```
 
-`lastFailureReason()` distinguishes the four ways an evaluation can fall
-through (`FLAG_NOT_FOUND`, `MISSING_CONTEXT_KEY`, `NO_ROLLOUT_MATCH`,
-`BACKEND_ERROR`) — useful when debugging or building higher-level wrappers.
+Every `getVariant()` call returns a `FeatureFlags_MixpanelSelectedVariant`
+with a `fallbackReason` field — `null` on success, or one of
+`REASON_FLAG_NOT_FOUND` / `MISSING_CONTEXT_KEY` / `NO_ROLLOUT_MATCH` /
+`BACKEND_ERROR` / `NOT_READY` when the SDK returned the fallback you passed
+in. Useful when debugging or building higher-level wrappers.
 
 See `examples/feature_flags.php` for a full walk-through.
 

@@ -27,7 +27,17 @@ $context = array(
 if ($mp->flags->isEnabled("new-checkout", $context)) {
     echo "new-checkout is enabled\n";
 } else {
-    echo "new-checkout fell back; reason: " . $mp->flags->lastFailureReason() . "\n";
+    // To know *why* we got the fallback, use getVariant() instead —
+    // its returned SelectedVariant carries a fallbackReason that's null
+    // on success and one of the REASON_* constants when the fallback
+    // was returned.
+    $variant = $mp->flags->getVariant(
+        "new-checkout",
+        new FeatureFlags_MixpanelSelectedVariant(null, false),
+        $context,
+        false   // don't double-count the exposure
+    );
+    echo "new-checkout fell back; reason: " . $variant->fallbackReason . "\n";
 }
 
 // Variant value with a typed fallback.

@@ -5,25 +5,15 @@ require_once(dirname(__FILE__) . "/MixpanelFlagsUtils.php");
 require_once(dirname(__FILE__) . "/MixpanelSelectedVariant.php");
 
 /**
- * Sentinel return codes for the most recent evaluation attempt. The
- * facade exposes these via lastFailureReason() so callers (including a
- * future OpenFeature wrapper) can distinguish a missing flag from a
- * missing context attribute from a no-match rollout. This addresses
- * finding #1 in the SDK audit — every existing SDK collapses all three
- * cases to "flag not found", which sends customers debugging the wrong
- * thing.
+ * Shared HTTP / exposure-tracking plumbing for the local and remote
+ * feature-flag providers. When a getVariant call falls through to the
+ * caller's fallback, the reason is attached to the returned
+ * SelectedVariant via its `fallbackReason` field (see
+ * FeatureFlags_MixpanelSelectedVariant::REASON_*) — addressing audit
+ * finding #1 (every other Mixpanel SDK collapses three distinct
+ * failure modes into "flag not found").
  */
 abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
-
-    const REASON_OK                  = 'OK';
-    const REASON_FLAG_NOT_FOUND      = 'FLAG_NOT_FOUND';
-    const REASON_MISSING_CONTEXT_KEY = 'MISSING_CONTEXT_KEY';
-    const REASON_NO_ROLLOUT_MATCH    = 'NO_ROLLOUT_MATCH';
-    const REASON_BACKEND_ERROR       = 'BACKEND_ERROR';
-    // Local-only: getVariant called before loadDefinitions() completed
-    // successfully. Distinguishes "we haven't fetched yet" from
-    // "fetched but this flag isn't defined".
-    const REASON_NOT_READY           = 'NOT_READY';
 
     /** @var string */
     protected $_token;
@@ -39,9 +29,6 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
 
     /** @var int seconds */
     protected $_requestTimeout;
-
-    /** @var string most recent evaluation outcome */
-    protected $_lastFailureReason = self::REASON_OK;
 
     public function __construct($token, $version, $tracker, array $options) {
         parent::__construct($options);
@@ -62,11 +49,6 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
             $this->_apiHost = 'api.mixpanel.com';
         }
         $this->_requestTimeout = isset($flagsOpts['request_timeout_in_seconds']) ? (int) $flagsOpts['request_timeout_in_seconds'] : 10;
-    }
-
-    /** @return string one of the REASON_* constants */
-    public function lastFailureReason() {
-        return $this->_lastFailureReason;
     }
 
     /** Release any held resources. Subclasses override to close cURL handles. */

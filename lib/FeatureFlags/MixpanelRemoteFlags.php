@@ -27,22 +27,19 @@ class FeatureFlags_MixpanelRemoteFlags extends FeatureFlags_MixpanelFlagsBase {
             $flags = $this->_fetchFlags($context, $flagKey);
         } catch (Exception $e) {
             // Audit finding #7: don't silently swallow backend errors.
-            // Surface to error_callback, mark the failure reason, and
-            // return fallback so a future OF wrapper can translate to
-            // GENERAL instead of FLAG_NOT_FOUND.
-            $this->_lastFailureReason = self::REASON_BACKEND_ERROR;
+            // Surface to error_callback, tag the fallback so a future
+            // OF wrapper can translate to GENERAL instead of
+            // FLAG_NOT_FOUND.
             $this->_handleError($e->getCode(), 'Remote flag fetch failed: ' . $e->getMessage());
-            return $fallback;
+            return $fallback->withFallbackReason(FeatureFlags_MixpanelSelectedVariant::REASON_BACKEND_ERROR);
         }
         $endTime = microtime(true);
 
         if (!isset($flags[$flagKey])) {
-            $this->_lastFailureReason = self::REASON_FLAG_NOT_FOUND;
-            return $fallback;
+            return $fallback->withFallbackReason(FeatureFlags_MixpanelSelectedVariant::REASON_FLAG_NOT_FOUND);
         }
 
         $selected = FeatureFlags_MixpanelSelectedVariant::fromArray($flags[$flagKey]);
-        $this->_lastFailureReason = self::REASON_OK;
 
         if ($reportExposure) {
             // Pass start/end so the exposure event carries
@@ -59,7 +56,6 @@ class FeatureFlags_MixpanelRemoteFlags extends FeatureFlags_MixpanelFlagsBase {
         try {
             $flags = $this->_fetchFlags($context, null);
         } catch (Exception $e) {
-            $this->_lastFailureReason = self::REASON_BACKEND_ERROR;
             $this->_handleError($e->getCode(), 'Remote flag fetch failed: ' . $e->getMessage());
             return array();
         }
@@ -68,7 +64,6 @@ class FeatureFlags_MixpanelRemoteFlags extends FeatureFlags_MixpanelFlagsBase {
         foreach ($flags as $key => $payload) {
             $out[$key] = FeatureFlags_MixpanelSelectedVariant::fromArray($payload);
         }
-        $this->_lastFailureReason = self::REASON_OK;
         return $out;
     }
 

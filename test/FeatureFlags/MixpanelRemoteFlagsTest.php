@@ -92,10 +92,10 @@ class MixpanelRemoteFlagsTest extends PHPUnit\Framework\TestCase {
         ));
         $fallback = new FeatureFlags_MixpanelSelectedVariant(null, 'fb');
         $variant = $this->_provider->getVariant('my-flag', $fallback, array('distinct_id' => 'u1'));
-        $this->assertSame($fallback, $variant);
+        $this->assertEquals('fb', $variant->variantValue);
         $this->assertEquals(
-            FeatureFlags_MixpanelFlagsBase::REASON_FLAG_NOT_FOUND,
-            $this->_provider->lastFailureReason()
+            FeatureFlags_MixpanelSelectedVariant::REASON_FLAG_NOT_FOUND,
+            $variant->fallbackReason
         );
     }
 
@@ -121,10 +121,10 @@ class MixpanelRemoteFlagsTest extends PHPUnit\Framework\TestCase {
 
         $fallback = new FeatureFlags_MixpanelSelectedVariant(null, 'fb');
         $variant = $provider->getVariant('my-flag', $fallback, array('distinct_id' => 'u1'));
-        $this->assertSame($fallback, $variant);
+        $this->assertEquals('fb', $variant->variantValue);
         $this->assertEquals(
-            FeatureFlags_MixpanelFlagsBase::REASON_BACKEND_ERROR,
-            $provider->lastFailureReason()
+            FeatureFlags_MixpanelSelectedVariant::REASON_BACKEND_ERROR,
+            $variant->fallbackReason
         );
         $this->assertCount(1, $errors);
         $this->assertStringContainsString('simulated HTTP 500', $errors[0]);
