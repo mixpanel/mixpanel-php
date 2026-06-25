@@ -1,4 +1,4 @@
-Mixpanel PHP Library [![Build Status](https://travis-ci.org/mixpanel/mixpanel-php.svg)](https://travis-ci.org/mixpanel/mixpanel-php)
+Mixpanel PHP Library
 ============
 
 ##### _May 13, 2026_ - [2.11.0](https://github.com/mixpanel/mixpanel-php/releases/tag/2.11.0)
@@ -68,6 +68,146 @@ $mp->people->set(12345, array(
 ));
 ```
 
+Feature Flags
+-------------
+
+`$mp->flags` evaluates Mixpanel feature flags either against the API on every
+call (remote mode) or in-process after fetching definitions once (local mode).
+Opt in by passing a `flags` config block when constructing the SDK:
+
+```php
+$mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN", array(
+    "flags" => array(
+        "mode" => FeatureFlags_MixpanelFlags::MODE_REMOTE,  // or MODE_LOCAL
+    ),
+));
+
+$context = array(
+    "distinct_id"       => "user-12345",
+    // Include any custom bucketing-key attributes the flag was configured
+    // against (e.g., device_id) alongside distinct_id.
+    "device_id"         => "abcdef-12345",
+    "custom_properties" => array("email" => "alice@example.com", "plan" => "pro"),
+);
+
+if ($mp->flags->isEnabled("new-checkout", $context)) {
+    // ...
+}
+```
+
+`isEnabled()` is the boolean shortcut. For typed values or full variant
+metadata, use `getVariantValue()` or `getVariant()`:
+
+```php
+$theme   = $mp->flags->getVariantValue("ui-theme", "light", $context);
+
+$variant = $mp->flags->getVariant(
+    "experiment-pricing",
+    new FeatureFlags_MixpanelSelectedVariant(null, "control"),
+    $context
+);
+echo $variant->variantKey;      // "treatment-a" / null
+echo $variant->variantValue;    // mixed
+echo $variant->experimentId;    // string|null
+echo $variant->fallbackReason;  // null on success; REASON_* if the SDK fell back
+```
+
+**Local mode** requires one explicit fetch of the definitions before evaluation
+(PHP's request-per-process model doesn't allow background polling like the
+Python/Ruby/Go/Node SDKs do):
+
+```php
+$mp = Mixpanel::getInstance("TOKEN", array(
+    "flags" => array("mode" => FeatureFlags_MixpanelFlags::MODE_LOCAL),
+));
+$mp->flags->loadDefinitions();                            // fetch once
+$enabled = $mp->flags->isEnabled("my-flag", $context);    // in-process eval
+```
+
+For long-running CLI workers, re-fetch on whatever cadence fits:
+
+```php
+$lastRefresh = time();
+while ($job = $queue->next()) {
+    if (time() - $lastRefresh >= 60) {
+        if ($mp->flags->loadDefinitions()) $lastRefresh = time();
+    }
+    processJob($job, $mp);
+}
+```
+
+### Configuration
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `mode` | `"remote"` | `MODE_LOCAL` or `MODE_REMOTE` (raw strings work too). |
+| `api_host` | inherits top-level `host`, then `"api.mixpanel.com"` | EU customers set `"api-eu.mixpanel.com"`; India `"api-in.mixpanel.com"`. |
+| `request_timeout_in_seconds` | `10` | Total budget per flags HTTP call (applied to connect + read). |
+
+The top-level `error_callback` option (shared with the event consumers) also
+receives flag-side errors — backend failures, definition-fetch failures, and
+warnings about missing `distinct_id` when an exposure can't be attached.
+
+### Public API at a glance
+
+```php
+// Lifecycle (no-ops/sentinels in remote mode)
+$mp->flags->loadDefinitions()  : bool       // local: fetch /flags/definitions
+$mp->flags->areFlagsReady()    : bool       // local: ready check
+$mp->flags->lastSyncedAt()     : int|null   // local: unix ts of last sync
+$mp->flags->getMode()          : string     // "local" or "remote"
+$mp->flags->shutdown()         : void
+
+// Evaluation
+$mp->flags->isEnabled($flagKey, $context)                       : bool
+$mp->flags->getVariantValue($flagKey, $fallbackValue, $context) : mixed
+$mp->flags->getVariant($flagKey, $fallback, $context, $reportExposure = true)
+                                                                : FeatureFlags_MixpanelSelectedVariant
+$mp->flags->getAllVariants($context)
+                : array<string, FeatureFlags_MixpanelSelectedVariant>
+$mp->flags->trackExposure($flagKey, $variant, $context)         : void
+
+// SelectedVariant fields
+$variant->variantKey           // string|null
+$variant->variantValue         // mixed
+$variant->experimentId         // string|null
+$variant->isExperimentActive   // bool|null
+$variant->isQaTester           // bool|null
+$variant->fallbackReason       // null on success; REASON_* on fallback
+
+// Fallback reasons (on FeatureFlags_MixpanelSelectedVariant)
+REASON_FLAG_NOT_FOUND          // flag key doesn't exist
+REASON_MISSING_CONTEXT_KEY     // context lacks the flag's bucketing attribute
+REASON_NO_ROLLOUT_MATCH        // flag exists, no rollout matched
+REASON_BACKEND_ERROR           // remote: HTTP transport / status failure
+REASON_NOT_READY               // local: getVariant called before loadDefinitions
+```
+
+`isEnabled()` returns `true` only when the resolved variant value is literal
+`bool(true)` — strings and other truthy values resolve to `false`. Use
+`getVariantValue()` if your flag carries a non-boolean value.
+
+`getAllVariants()` does NOT auto-fire exposure events (bulk exposure would
+skew analytics for flags the caller never actually reads). Pair it with
+`trackExposure()` per flag you consume.
+
+### Common gotcha
+
+`Mixpanel::getInstance()` caches per-token and **ignores `$options` on
+subsequent calls**. If anything in your app calls `Mixpanel::getInstance($token)`
+before your flag-aware code does, the cached instance's `$mp->flags` will be
+`null`. Two safe patterns:
+
+```php
+// Always pass flags config at the first call site
+Mixpanel::getInstance("TOKEN", array("flags" => array("mode" => "remote")));
+
+// Or bypass the singleton entirely
+$mp = new Mixpanel("TOKEN", array("flags" => array("mode" => "remote")));
+```
+
+Full reference docs live on the Mixpanel docs site.
+
 Production Notes
 -------------
 By default, data is sent using ssl over cURL. This works fine when you're tracking a small number of events or aren't concerned with the potentially blocking nature of the PHP cURL calls. However, this isn't very efficient when you're sending hundreds of events (such as in batch processing). Our library comes packaged with an easy way to use a persistent socket connection for much more efficient writes. To enable the persistent socket, simply pass `'consumer' => 'socket'` as an entry in the `$options` array when you instantiate the Mixpanel class. Additionally, you can contribute your own persistence implementation by creating a custom Consumer.
@@ -82,7 +222,7 @@ Documentation
 * <a href="https://mixpanel.com/help/reference/php" target="_blank">Reference Docs</a>
 * <a href="http://mixpanel.github.io/mixpanel-php" target="_blank">Full API Reference</a>
 
-For further examples and options checkout out the "examples" folder
+For further examples and options check out the "examples" folder.
 
 Changelog
 -------------
