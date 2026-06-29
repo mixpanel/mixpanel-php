@@ -87,11 +87,16 @@ class MixpanelLocalFlagsTest extends PHPUnit\Framework\TestCase {
         $result = $this->_provider->getVariant('unknown', $fallback, array('distinct_id' => 'u1'));
         $this->assertEquals('fallback', $result->variantValue);
         $this->assertEquals(
+            FeatureFlags_MixpanelSelectedVariant::SOURCE_FALLBACK,
+            $result->variantSource
+        );
+        $this->assertEquals(
             FeatureFlags_MixpanelSelectedVariant::REASON_FLAG_NOT_FOUND,
             $result->fallbackReason
         );
         // The caller's fallback object must not be mutated — we return a clone.
         $this->assertNull($fallback->fallbackReason);
+        $this->assertNull($fallback->variantSource);
     }
 
     public function testGetVariantBeforeLoadReturnsNotReady() {
@@ -132,7 +137,9 @@ class MixpanelLocalFlagsTest extends PHPUnit\Framework\TestCase {
         $this->assertSame(true, $result->variantValue);
         $this->assertEquals('exp-my-flag', $result->experimentId);
         $this->assertTrue($result->isExperimentActive);
-        // null fallbackReason means evaluation succeeded — no fallback used.
+        // variantSource=local marks a real local-eval match. null fallbackReason
+        // means evaluation succeeded — no fallback used.
+        $this->assertEquals(FeatureFlags_MixpanelSelectedVariant::SOURCE_LOCAL, $result->variantSource);
         $this->assertNull($result->fallbackReason);
     }
 

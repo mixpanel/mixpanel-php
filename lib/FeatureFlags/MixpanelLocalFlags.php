@@ -129,7 +129,7 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
             $this->_trackExposure($flagKey, $selected, $context, 'local', $latencyMs);
         }
 
-        return $selected;
+        return $selected->withSource(FeatureFlags_MixpanelSelectedVariant::SOURCE_LOCAL);
     }
 
     public function getAllVariants(array $context) {

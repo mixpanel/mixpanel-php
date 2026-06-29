@@ -39,7 +39,8 @@ class FeatureFlags_MixpanelRemoteFlags extends FeatureFlags_MixpanelFlagsBase {
             return $fallback->withFallbackReason(FeatureFlags_MixpanelSelectedVariant::REASON_FLAG_NOT_FOUND);
         }
 
-        $selected = FeatureFlags_MixpanelSelectedVariant::fromArray($flags[$flagKey]);
+        $selected = FeatureFlags_MixpanelSelectedVariant::fromArray($flags[$flagKey])
+            ->withSource(FeatureFlags_MixpanelSelectedVariant::SOURCE_REMOTE);
 
         if ($reportExposure) {
             // Pass start/end so the exposure event carries
@@ -62,7 +63,8 @@ class FeatureFlags_MixpanelRemoteFlags extends FeatureFlags_MixpanelFlagsBase {
 
         $out = array();
         foreach ($flags as $key => $payload) {
-            $out[$key] = FeatureFlags_MixpanelSelectedVariant::fromArray($payload);
+            $out[$key] = FeatureFlags_MixpanelSelectedVariant::fromArray($payload)
+                ->withSource(FeatureFlags_MixpanelSelectedVariant::SOURCE_REMOTE);
         }
         return $out;
     }

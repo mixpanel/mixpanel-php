@@ -56,6 +56,8 @@ class MixpanelRemoteFlagsTest extends PHPUnit\Framework\TestCase {
 
         $this->assertEquals('on', $variant->variantKey);
         $this->assertSame(true, $variant->variantValue);
+        $this->assertEquals(FeatureFlags_MixpanelSelectedVariant::SOURCE_REMOTE, $variant->variantSource);
+        $this->assertNull($variant->fallbackReason);
         $this->assertEquals('/flags', $this->_provider->lastRequest['path']);
         $this->assertEquals('my-flag', $this->_provider->lastRequest['query']['flag_key']);
         $this->assertEquals(json_encode($context), $this->_provider->lastRequest['query']['context']);
@@ -93,6 +95,10 @@ class MixpanelRemoteFlagsTest extends PHPUnit\Framework\TestCase {
         $fallback = new FeatureFlags_MixpanelSelectedVariant(null, 'fb');
         $variant = $this->_provider->getVariant('my-flag', $fallback, array('distinct_id' => 'u1'));
         $this->assertEquals('fb', $variant->variantValue);
+        $this->assertEquals(
+            FeatureFlags_MixpanelSelectedVariant::SOURCE_FALLBACK,
+            $variant->variantSource
+        );
         $this->assertEquals(
             FeatureFlags_MixpanelSelectedVariant::REASON_FLAG_NOT_FOUND,
             $variant->fallbackReason
