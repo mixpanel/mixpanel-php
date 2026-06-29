@@ -3,22 +3,29 @@
 /**
  * A feature-flag variant after evaluation.
  *
- * Matches the shape used by the Python, Ruby, Go, and Java SDKs so that
- * downstream wrappers (a future OpenFeature provider) and analytics
- * tooling can rely on the same field names across languages.
+ * Matches the shape used by the Python, Ruby, Go, Java, and Node SDKs so
+ * that downstream wrappers (the OpenFeature provider) and analytics tooling
+ * can rely on the same field names across languages.
  *
  * The `experimentId`, `isExperimentActive`, and `isQaTester` fields are
  * kept available so a future OpenFeature wrapper can forward them as
- * `flag_metadata` — addressing finding "Design C" in the cross-SDK
- * audit (other wrappers throw this metadata away).
+ * `flag_metadata` — addressing finding "Design C" in the cross-SDK audit
+ * (other wrappers throw this metadata away).
  *
- * `fallbackReason` is `null` when evaluation succeeded; when the SDK
- * returns the fallback you passed in, it's set to one of the REASON_*
- * constants below so the caller (or a future OpenFeature wrapper) can
- * distinguish flag-not-found from missing-context-key from no-rollout-
- * match etc. — addressing audit finding #1.
+ * Two fields describe the result's provenance:
+ * - `variantSource` is always set: `local` (local rule evaluation),
+ *   `remote` (server-side /flags response), or `fallback` (developer
+ *   fallback returned because the SDK had no value to serve).
+ * - `fallbackReason` is `null` on success; when `variantSource === 'fallback'`
+ *   it's set to one of the REASON_* constants below so the OpenFeature
+ *   wrapper can map each reason to the spec-correct error code instead of
+ *   collapsing every fallback to FLAG_NOT_FOUND (audit finding #1).
  */
 class FeatureFlags_MixpanelSelectedVariant {
+
+    const SOURCE_LOCAL    = 'local';
+    const SOURCE_REMOTE   = 'remote';
+    const SOURCE_FALLBACK = 'fallback';
 
     const REASON_FLAG_NOT_FOUND      = 'FLAG_NOT_FOUND';
     const REASON_MISSING_CONTEXT_KEY = 'MISSING_CONTEXT_KEY';
@@ -41,7 +48,10 @@ class FeatureFlags_MixpanelSelectedVariant {
     /** @var bool|null */
     public $isQaTester;
 
-    /** @var string|null null on success; one of the REASON_* constants when the fallback was returned */
+    /** @var string|null one of SOURCE_*; set by the providers on every returned variant */
+    public $variantSource;
+
+    /** @var string|null null on success; one of the REASON_* constants when variantSource === SOURCE_FALLBACK */
     public $fallbackReason;
 
     public function __construct(
@@ -50,7 +60,8 @@ class FeatureFlags_MixpanelSelectedVariant {
         $experimentId = null,
         $isExperimentActive = null,
         $isQaTester = null,
-        $fallbackReason = null
+        $fallbackReason = null,
+        $variantSource = null
     ) {
         $this->variantKey = $variantKey;
         $this->variantValue = $variantValue;
@@ -58,6 +69,7 @@ class FeatureFlags_MixpanelSelectedVariant {
         $this->isExperimentActive = $isExperimentActive;
         $this->isQaTester = $isQaTester;
         $this->fallbackReason = $fallbackReason;
+        $this->variantSource = $variantSource;
     }
 
     /**
@@ -78,15 +90,32 @@ class FeatureFlags_MixpanelSelectedVariant {
     }
 
     /**
-     * Return a copy of this variant with the supplied fallbackReason
-     * set. Used by the providers to tag the caller's fallback without
-     * mutating their object.
+     * Return a copy of this variant with the given source. Clears
+     * fallbackReason — use {@link withFallbackReason} when returning a
+     * fallback.
+     *
+     * @param string $source one of the SOURCE_* constants
+     * @return FeatureFlags_MixpanelSelectedVariant
+     */
+    public function withSource($source) {
+        $clone = clone $this;
+        $clone->variantSource = $source;
+        $clone->fallbackReason = null;
+        return $clone;
+    }
+
+    /**
+     * Return a copy of this variant tagged as a fallback with the given
+     * reason. Sets `variantSource` to SOURCE_FALLBACK and `fallbackReason`
+     * to the supplied REASON_* constant. Used by the providers to tag the
+     * caller's fallback without mutating their object.
      *
      * @param string $reason one of the REASON_* constants
      * @return FeatureFlags_MixpanelSelectedVariant
      */
     public function withFallbackReason($reason) {
         $clone = clone $this;
+        $clone->variantSource = self::SOURCE_FALLBACK;
         $clone->fallbackReason = $reason;
         return $clone;
     }
@@ -101,6 +130,7 @@ class FeatureFlags_MixpanelSelectedVariant {
             'experiment_id'        => $this->experimentId,
             'is_experiment_active' => $this->isExperimentActive,
             'is_qa_tester'         => $this->isQaTester,
+            'variant_source'       => $this->variantSource,
             'fallback_reason'      => $this->fallbackReason,
         );
     }
