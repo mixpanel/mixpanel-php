@@ -32,6 +32,7 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 require_once(dirname(__FILE__) . "/AbstractConsumer.php");
+require_once(dirname(__FILE__) . "/../Credentials/MixpanelCredentials.php");
 
 /**
  * Consumes messages and writes them to host/endpoint using a persistent socket
@@ -120,6 +121,15 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
         $body.= "Host: " . $this->_host . "\r\n";
         $body.= "Content-Type: application/x-www-form-urlencoded\r\n";
         $body.= "Accept: application/json\r\n";
+
+        // Add authentication headers if credentials are provided
+        if (isset($this->_options['_credentials']) && $this->_options['_credentials'] instanceof Credentials_MixpanelCredentials) {
+            $auth_headers = $this->_options['_credentials']->getAuthHeaders();
+            foreach ($auth_headers as $name => $value) {
+                $body.= $name . ": " . $value . "\r\n";
+            }
+        }
+
         $body.= "Content-length: " . strlen($data) . "\r\n";
         $body.= "\r\n";
         $body.= $data;

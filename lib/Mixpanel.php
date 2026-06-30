@@ -4,6 +4,9 @@ require_once(dirname(__FILE__) . "/Base/MixpanelBase.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelPeople.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelEvents.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelGroups.php");
+require_once(dirname(__FILE__) . "/Credentials/MixpanelCredentials.php");
+require_once(dirname(__FILE__) . "/Credentials/ServiceAccountCredentials.php");
+require_once(dirname(__FILE__) . "/Credentials/APISecretCredentials.php");
 
 /**
  * This is the main class for the Mixpanel PHP Library which provides all of the methods you need to track events,
@@ -140,11 +143,51 @@ class Mixpanel extends Base_MixpanelBase {
 
     /**
      * Instantiates a new Mixpanel instance.
-     * @param $token
-     * @param array $options
+     *
+     * @param string|Credentials_MixpanelCredentials $token_or_credentials
+     *        Either a project token (deprecated) or a MixpanelCredentials object (recommended: ServiceAccountCredentials)
+     * @param array $options Optional configuration options
+     *
+     * @example Using Service Account (recommended):
+     *   $credentials = new Credentials_ServiceAccountCredentials("project-id", "username", "secret");
+     *   $mp = new Mixpanel($credentials);
+     *
+     * @example Using legacy token (deprecated):
+     *   $mp = new Mixpanel("YOUR_PROJECT_TOKEN");
      */
-    public function __construct($token, $options = array()) {
+    public function __construct($token_or_credentials, $options = array()) {
         parent::__construct($options);
+
+        // Handle credentials vs legacy token
+        if ($token_or_credentials instanceof Credentials_MixpanelCredentials) {
+            $credentials = $token_or_credentials;
+            $token = null;
+
+            // Log deprecation warning if using deprecated credentials
+            if ($credentials->isDeprecated()) {
+                error_log(
+                    'DEPRECATION WARNING: You are using deprecated API credentials. ' .
+                    'Please migrate to ServiceAccountCredentials for better security. ' .
+                    'See: https://docs.mixpanel.com/docs/tracking-methods/choosing-the-right-method'
+                );
+            }
+        } else {
+            // Legacy token-based authentication (deprecated)
+            $token = $token_or_credentials;
+            $credentials = null;
+
+            // Log deprecation warning for token usage
+            error_log(
+                'DEPRECATION WARNING: Passing a token string to Mixpanel constructor is deprecated. ' .
+                'Please use ServiceAccountCredentials instead for enhanced security. ' .
+                'Example: new Mixpanel(new Credentials_ServiceAccountCredentials($project_id, $username, $secret)). ' .
+                'See: https://docs.mixpanel.com/docs/tracking-methods/choosing-the-right-method'
+            );
+        }
+
+        // Pass credentials to producers
+        $options['_credentials'] = $credentials;
+
         $this->people = new Producers_MixpanelPeople($token, $options);
         $this->_events = new Producers_MixpanelEvents($token, $options);
         $this->group = new Producers_MixpanelGroups($token, $options);
@@ -153,15 +196,23 @@ class Mixpanel extends Base_MixpanelBase {
 
     /**
      * Returns a singleton instance of Mixpanel
-     * @param $token
-     * @param array $options
+     * @param string|Credentials_MixpanelCredentials $token_or_credentials
+     *        Either a project token (deprecated) or a MixpanelCredentials object
+     * @param array $options Optional configuration options
      * @return Mixpanel
      */
-    public static function getInstance($token, $options = array()) {
-        if(!isset(self::$_instances[$token])) {
-            self::$_instances[$token] = new Mixpanel($token, $options);
+    public static function getInstance($token_or_credentials, $options = array()) {
+        // Create a unique key for the instance based on credentials or token
+        if ($token_or_credentials instanceof Credentials_MixpanelCredentials) {
+            $key = $token_or_credentials->getProjectId();
+        } else {
+            $key = $token_or_credentials;
         }
-        return self::$_instances[$token];
+
+        if(!isset(self::$_instances[$key])) {
+            self::$_instances[$key] = new Mixpanel($token_or_credentials, $options);
+        }
+        return self::$_instances[$key];
     }
 
 

@@ -24,8 +24,13 @@ Now you can start tracking events and people:
 // import dependencies
 require 'vendor/autoload.php';
 
-// get the Mixpanel class instance, replace with your project token
-$mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN");
+// Recommended: Use Service Account credentials for secure server-to-server integration
+$credentials = new Credentials_ServiceAccountCredentials(
+    "YOUR_PROJECT_ID",
+    "YOUR_SERVICE_ACCOUNT_USERNAME", 
+    "YOUR_SERVICE_ACCOUNT_SECRET"
+);
+$mp = Mixpanel::getInstance($credentials);
 
 // track an event
 $mp->track("button clicked", array("label" => "sign-up")); 
@@ -40,6 +45,14 @@ $mp->people->set(12345, array(
 ));
 ```
 
+**Legacy Authentication (Deprecated):**
+```php
+<?php
+// DEPRECATED: Using project token directly is deprecated
+// This method will be removed in a future version
+$mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN");
+```
+
 
 Install Manually
 ------------
@@ -52,8 +65,13 @@ Install Manually
 // import Mixpanel
 require 'mixpanel-php/lib/Mixpanel.php';
 
-// get the Mixpanel class instance, replace with your project token
-$mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN");
+// Recommended: Use Service Account credentials
+$credentials = new Credentials_ServiceAccountCredentials(
+    "YOUR_PROJECT_ID",
+    "YOUR_SERVICE_ACCOUNT_USERNAME",
+    "YOUR_SERVICE_ACCOUNT_SECRET"
+);
+$mp = Mixpanel::getInstance($credentials);
 
 // track an event
 $mp->track("button clicked", array("label" => "sign-up"));
@@ -67,6 +85,50 @@ $mp->people->set(12345, array(
     "Favorite Color"    => "red"
 ));
 ```
+
+Authentication
+-------------
+### Service Accounts (Recommended)
+
+Service Account authentication is the recommended method for server-to-server integration. It provides enhanced security and fine-grained access control.
+
+```php
+$credentials = new Credentials_ServiceAccountCredentials(
+    "YOUR_PROJECT_ID",
+    "YOUR_SERVICE_ACCOUNT_USERNAME",
+    "YOUR_SERVICE_ACCOUNT_SECRET"
+);
+$mp = Mixpanel::getInstance($credentials);
+```
+
+To create service account credentials:
+1. Go to your Mixpanel project settings
+2. Navigate to "Service Accounts"
+3. Create a new service account and note the credentials
+
+### API Secrets (Deprecated)
+
+**⚠️ DEPRECATED:** API secret authentication is deprecated and will be removed in a future version. Please migrate to Service Accounts.
+
+```php
+// Not recommended - deprecated
+$credentials = new Credentials_APISecretCredentials(
+    "YOUR_PROJECT_ID",
+    "YOUR_API_SECRET"
+);
+$mp = Mixpanel::getInstance($credentials);
+```
+
+### Project Tokens (Deprecated)
+
+**⚠️ DEPRECATED:** Using project tokens directly is deprecated and will be removed in a future version.
+
+```php
+// Not recommended - deprecated
+$mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN");
+```
+
+For more information on authentication methods, see: https://docs.mixpanel.com/docs/tracking-methods/choosing-the-right-method
 
 Production Notes
 -------------
@@ -86,6 +148,15 @@ For further examples and options checkout out the "examples" folder
 
 Changelog
 -------------
+Version 2.12.0 (Unreleased)
+* **FEATURE**: Add Service Account authentication support (recommended for server-to-server integration)
+* **FEATURE**: Add APISecretCredentials class for API secret authentication (marked as deprecated)
+* **DEPRECATION**: Using project token strings directly in Mixpanel constructor is now deprecated
+* **DEPRECATION**: API secret authentication is deprecated in favor of Service Accounts
+* Add authentication headers support to CurlConsumer and SocketConsumer
+* Add comprehensive test coverage for credential authentication
+* Update documentation with Service Account examples
+
 Version 2.11.0
 * Fix identify regex for $anon_id
 * Fix PHP 8.2 deprecation warning

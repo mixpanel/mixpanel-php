@@ -1,5 +1,6 @@
 <?php
 require_once(dirname(__FILE__) . "/AbstractConsumer.php");
+require_once(dirname(__FILE__) . "/../Credentials/MixpanelCredentials.php");
 
 /**
  * Consumes messages and sends them to a host/endpoint using cURL
@@ -117,6 +118,9 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
         $mh = curl_multi_init();
         $chs = array();
 
+        // Build authentication headers if credentials are provided
+        $auth_headers = $this->_getAuthHeaders();
+
         $batch_size = ceil(count($batch) / $this->_num_threads);
         for ($i=0; $i<$this->_num_threads && !empty($batch); $i++) {
             $ch = curl_init();
@@ -129,6 +133,12 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
             curl_setopt($ch, CURLOPT_POST, 1);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+
+            // Add authentication headers if available
+            if (!empty($auth_headers)) {
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $auth_headers);
+            }
+
             curl_multi_add_handle($mh,$ch);
         }
 
@@ -201,8 +211,33 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
      * @return string
      */
     protected function _buildExecCommand($url, $data) {
-        return 'curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -d '
-            . escapeshellarg($data) . ' ' . escapeshellarg($url);
+        $cmd = 'curl -X POST -H "Content-Type: application/x-www-form-urlencoded"';
+
+        // Add authentication headers if credentials are provided
+        $auth_headers = $this->_getAuthHeaders();
+        foreach ($auth_headers as $header) {
+            $cmd .= ' -H ' . escapeshellarg($header);
+        }
+
+        $cmd .= ' -d ' . escapeshellarg($data) . ' ' . escapeshellarg($url);
+        return $cmd;
+    }
+
+    /**
+     * Get authentication headers from credentials if available
+     * @return array Array of header strings in the format "Header-Name: Header-Value"
+     */
+    protected function _getAuthHeaders() {
+        $headers = array();
+
+        if (isset($this->_options['_credentials']) && $this->_options['_credentials'] instanceof Credentials_MixpanelCredentials) {
+            $auth_headers = $this->_options['_credentials']->getAuthHeaders();
+            foreach ($auth_headers as $name => $value) {
+                $headers[] = $name . ': ' . $value;
+            }
+        }
+
+        return $headers;
     }
 
     /**

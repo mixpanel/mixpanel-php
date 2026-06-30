@@ -15,9 +15,14 @@ abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
 
 
     /**
-     * @var string a token associated to a Mixpanel project
+     * @var string a token associated to a Mixpanel project (deprecated, use $_credentials)
      */
     protected $_token;
+
+    /**
+     * @var Credentials_MixpanelCredentials|null credentials for authentication
+     */
+    protected $_credentials = null;
 
 
     /**
@@ -69,11 +74,20 @@ abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
             $this->_max_queue_size = $options['max_queue_size'];
         }
 
-        // associate token
+        // Extract credentials if provided
+        if (isset($options['_credentials'])) {
+            $this->_credentials = $options['_credentials'];
+        }
+
+        // associate token (for backward compatibility)
         $this->_token = $token;
 
         if ($this->_debug()) {
-            $this->_log("Using token: ".$this->_token);
+            if ($this->_credentials) {
+                $this->_log("Using credentials authentication for project: " . $this->_credentials->getProjectId());
+            } else {
+                $this->_log("Using token: ".$this->_token);
+            }
         }
 
         // instantiate the chosen consumer
@@ -161,6 +175,14 @@ abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
      */
     public function getToken() {
         return $this->_token;
+    }
+
+    /**
+     * Returns the credentials object if using credential-based authentication
+     * @return Credentials_MixpanelCredentials|null
+     */
+    public function getCredentials() {
+        return $this->_credentials;
     }
 
 
