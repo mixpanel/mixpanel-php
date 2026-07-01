@@ -74,6 +74,14 @@ class FeatureFlags_MixpanelFlagsUtils {
      * comparisons against context values are case-insensitive without
      * mangling operator names like "in" or "==".
      *
+     * INVARIANT: this MUST be applied to the rule in lockstep with
+     * {@link self::lowercaseKeysAndValues} on the runtime parameters.
+     * `lowercaseLeafNodes` lowercases the operand values inside
+     * `{"var": "Email"}` to `"email"`; if the parameter keys aren't
+     * also lowercased, JSON-Logic's `var` lookup misses and every
+     * runtime-rule flag silently falls back. The two functions live
+     * together and must stay in sync.
+     *
      * @param mixed $value
      * @return mixed
      */

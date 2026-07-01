@@ -50,7 +50,11 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
             }
             if (isset($flag['ruleset']['variants']) && is_array($flag['ruleset']['variants'])) {
                 // Sort variants by key for deterministic bucket assignment.
-                usort($flag['ruleset']['variants'], array(__CLASS__, '_compareVariantKeys'));
+                usort($flag['ruleset']['variants'], function ($a, $b) {
+                    $ak = isset($a['key']) ? (string) $a['key'] : '';
+                    $bk = isset($b['key']) ? (string) $b['key'] : '';
+                    return strcmp($ak, $bk);
+                });
             }
             $byKey[$flag['key']] = $flag;
         }
@@ -58,12 +62,6 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
         $this->_ready = true;
         $this->_lastSyncedAt = time();
         return true;
-    }
-
-    public static function _compareVariantKeys($a, $b) {
-        $ak = isset($a['key']) ? (string) $a['key'] : '';
-        $bk = isset($b['key']) ? (string) $b['key'] : '';
-        return strcmp($ak, $bk);
     }
 
     /** @return bool true once loadDefinitions has succeeded at least once */
@@ -186,6 +184,9 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
             return null;
         }
         $flagKey = isset($flag['key']) ? $flag['key'] : '';
+        // Default to null (not '') so the branch below can distinguish
+        // "flag declared a salt" from "flag has no salt at all" — the two
+        // pick completely different salt formulas.
         $hashSalt = isset($flag['hash_salt']) ? $flag['hash_salt'] : null;
 
         foreach ($flag['ruleset']['rollout'] as $index => $rollout) {
@@ -212,6 +213,8 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
             }
         }
 
+        // Default to '' (not null) — this codepath just concatenates and never
+        // branches on presence, so the empty string collapses cleanly.
         $hashSalt = isset($flag['hash_salt']) ? $flag['hash_salt'] : '';
         $salt = $flagKey . $hashSalt . 'variant';
         $variantHash = FeatureFlags_MixpanelFlagsUtils::normalizedHash($contextValue, $salt);
@@ -253,6 +256,13 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
         if (isset($rollout['runtime_evaluation_rule']) && $rollout['runtime_evaluation_rule']) {
             $params = $this->_runtimeParameters($context);
             if ($params === null) {
+                // Not an error — the rollout just doesn't match — but log so
+                // callers debugging "why did I fall through to REASON_NO_ROLLOUT_MATCH"
+                // can see the missing custom_properties is why.
+                $this->_handleError(
+                    0,
+                    'Runtime rule present but custom_properties missing from context; rollout skipped.'
+                );
                 return false;
             }
             try {
@@ -279,6 +289,10 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
     private function _legacyRuntimeRuleSatisfied(array $definition, array $context) {
         $params = $this->_runtimeParameters($context);
         if ($params === null) {
+            $this->_handleError(
+                0,
+                'Legacy runtime rule present but custom_properties missing from context; rollout skipped.'
+            );
             return false;
         }
         foreach ($definition as $key => $expectedValue) {

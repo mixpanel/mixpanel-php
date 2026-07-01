@@ -75,7 +75,8 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
         $url = 'https://' . $this->_apiHost . $path . '?' . http_build_query($params);
 
         $headers = array(
-            'Content-Type: application/json',
+            // GET requests have no body — describe what we accept, not what we're sending.
+            'Accept: application/json',
             'X-Scheme: https',
             'X-Forwarded-Proto: https',
             'traceparent: ' . FeatureFlags_MixpanelFlagsUtils::generateTraceparent(),

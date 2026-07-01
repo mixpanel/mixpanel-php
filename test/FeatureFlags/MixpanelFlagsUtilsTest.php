@@ -69,4 +69,24 @@ class MixpanelFlagsUtilsTest extends PHPUnit\Framework\TestCase {
         // Non-string values pass through unchanged.
         $this->assertSame(5, $out['count']);
     }
+
+    /**
+     * Locks the invariant documented on {@link FeatureFlags_MixpanelFlagsUtils::lowercaseLeafNodes}:
+     * the rule side ({@code lowercaseLeafNodes}) and the parameter side
+     * ({@code lowercaseKeysAndValues}) must resolve the same var name to
+     * the same casefolded key. If someone changes one function without the
+     * other, JSON-Logic's `var` lookup silently misses and every
+     * runtime-rule flag falls back — this test would catch that.
+     */
+    public function testLeafNodesAndKeysAndValuesUseCompatibleCasefolding() {
+        $rule = array('==' => array(array('var' => 'Email'), 'Alice@Example.COM'));
+        $params = array('Email' => 'Alice@Example.COM');
+
+        $normalizedRule = FeatureFlags_MixpanelFlagsUtils::lowercaseLeafNodes($rule);
+        $normalizedParams = FeatureFlags_MixpanelFlagsUtils::lowercaseKeysAndValues($params);
+
+        $varName = $normalizedRule['=='][0]['var'];
+        $this->assertArrayHasKey($varName, $normalizedParams);
+        $this->assertSame($normalizedRule['=='][1], $normalizedParams[$varName]);
+    }
 }

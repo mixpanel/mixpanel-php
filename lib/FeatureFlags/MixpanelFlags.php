@@ -40,7 +40,19 @@ class FeatureFlags_MixpanelFlags {
         // symfony/polyfill-mbstring (composer dep), HTTP uses the
         // existing CurlConsumer which already runtime-checks ext-curl.
         $flagsOpts = isset($options['flags']) && is_array($options['flags']) ? $options['flags'] : array();
-        $this->_mode = isset($flagsOpts['mode']) ? strtolower((string) $flagsOpts['mode']) : self::MODE_REMOTE;
+        if (isset($flagsOpts['mode'])) {
+            $requested = strtolower((string) $flagsOpts['mode']);
+            if ($requested !== self::MODE_LOCAL && $requested !== self::MODE_REMOTE) {
+                // Fail loudly on typos ('lcoal' -> silently falls through to remote is a debug trap).
+                throw new InvalidArgumentException(
+                    "Invalid flags 'mode' option: " . var_export($flagsOpts['mode'], true) .
+                    ". Expected '" . self::MODE_LOCAL . "' or '" . self::MODE_REMOTE . "'."
+                );
+            }
+            $this->_mode = $requested;
+        } else {
+            $this->_mode = self::MODE_REMOTE;
+        }
 
         if ($this->_mode === self::MODE_LOCAL) {
             $this->_provider = new FeatureFlags_MixpanelLocalFlags($token, $version, $tracker, $options);
@@ -50,7 +62,13 @@ class FeatureFlags_MixpanelFlags {
     }
 
     public function __destruct() {
-        $this->shutdown();
+        try {
+            $this->shutdown();
+        } catch (\Throwable $t) {
+            // Swallow: destructors run during shutdown/fatal-error paths where
+            // throwing could mask the original error or hit a partially-torn-down
+            // interpreter state.
+        }
     }
 
     /** @return string 'local' or 'remote' */

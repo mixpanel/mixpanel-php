@@ -67,6 +67,22 @@ class MixpanelFlagsTest extends PHPUnit\Framework\TestCase {
         $this->assertInstanceOf('FeatureFlags_MixpanelLocalFlags', $viaLiteral->flags->getProvider());
     }
 
+    public function testInvalidModeThrows() {
+        // Typos like 'lcoal' used to silently fall through to remote — a debug trap
+        // when the intent was local. Fail loudly instead.
+        $this->setExpectedExceptionCompat('InvalidArgumentException');
+        new Mixpanel('token', array('flags' => array('mode' => 'lcoal')));
+    }
+
+    /** Shim: setExpectedException is deprecated on 8.x+, expectException is the modern form. */
+    private function setExpectedExceptionCompat($class) {
+        if (method_exists($this, 'expectException')) {
+            $this->expectException($class);
+        } else {
+            $this->setExpectedException($class);
+        }
+    }
+
     public function testFlagsApiHostInheritsFromTopLevelHost() {
         // If the caller already pointed the SDK at a regional or mock
         // endpoint via the top-level `host` option, the flags module
