@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 require_once(dirname(__FILE__) . "/MixpanelFlagsBase.php");
 
 /**
@@ -17,24 +19,21 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
 
     const DEFINITIONS_PATH = '/flags/definitions';
 
-    /** @var array map of flag_key => flag definition (decoded JSON) */
-    private $_definitions = array();
+    /** @var array<string, array> map of flag_key => flag definition (decoded JSON) */
+    private array $_definitions = array();
 
-    /** @var bool */
-    private $_ready = false;
+    private bool $_ready = false;
 
-    /** @var int|null unix timestamp of last successful loadDefinitions */
-    private $_lastSyncedAt = null;
+    /** Unix timestamp of last successful loadDefinitions. */
+    private ?int $_lastSyncedAt = null;
 
     /**
      * Fetch the latest flag definitions from Mixpanel. Throws nothing
      * on transport failure — the error is routed to error_callback so
      * the existing definitions (if any) keep working until the next
      * successful call. Returns true on success.
-     *
-     * @return bool
      */
-    public function loadDefinitions() {
+    public function loadDefinitions(): bool {
         try {
             $response = $this->_httpGet(self::DEFINITIONS_PATH);
         } catch (Exception $e) {
@@ -64,22 +63,26 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
         return true;
     }
 
-    /** @return bool true once loadDefinitions has succeeded at least once */
-    public function areFlagsReady() {
+    /** True once loadDefinitions has succeeded at least once. */
+    public function areFlagsReady(): bool {
         return $this->_ready;
     }
 
-    /** @return int|null unix timestamp of most recent successful sync */
-    public function lastSyncedAt() {
+    /** Unix timestamp of most recent successful sync. */
+    public function lastSyncedAt(): ?int {
         return $this->_lastSyncedAt;
     }
 
-    protected function _evaluationMode() {
+    protected function _evaluationMode(): string {
         return 'local';
     }
 
-    public function getVariant($flagKey, FeatureFlags_MixpanelSelectedVariant $fallback, array $context, $reportExposure = true) {
-        $reportExposure = (bool) $reportExposure;
+    public function getVariant(
+        string $flagKey,
+        FeatureFlags_MixpanelSelectedVariant $fallback,
+        array $context,
+        bool $reportExposure = true
+    ): FeatureFlags_MixpanelSelectedVariant {
         $startTime = microtime(true);
 
         if (!$this->_ready) {
@@ -130,7 +133,7 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
         return $selected->withSource(FeatureFlags_MixpanelSelectedVariant::SOURCE_LOCAL);
     }
 
-    public function getAllVariants(array $context) {
+    public function getAllVariants(array $context): array {
         $out = array();
         foreach ($this->_definitions as $flagKey => $_def) {
             $fallback = new FeatureFlags_MixpanelSelectedVariant(null, null);
@@ -142,7 +145,7 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
         return $out;
     }
 
-    private function _overrideForTestUser(array $flag, array $context) {
+    private function _overrideForTestUser(array $flag, array $context): ?FeatureFlags_MixpanelSelectedVariant {
         if (!isset($flag['ruleset']['test']['users']) || !is_array($flag['ruleset']['test']['users'])) {
             return null;
         }
@@ -157,7 +160,7 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
         return $this->_matchingVariant($users[$distinctId], $flag, /* isQaTester */ true);
     }
 
-    private function _matchingVariant($variantKey, array $flag, $isQaTester = false) {
+    private function _matchingVariant(string $variantKey, array $flag, bool $isQaTester = false): ?FeatureFlags_MixpanelSelectedVariant {
         if (!isset($flag['ruleset']['variants']) || !is_array($flag['ruleset']['variants'])) {
             return null;
         }
@@ -179,7 +182,7 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
         return null;
     }
 
-    private function _assignedRollout(array $flag, $contextValue, array $context) {
+    private function _assignedRollout(array $flag, string $contextValue, array $context): ?array {
         if (!isset($flag['ruleset']['rollout']) || !is_array($flag['ruleset']['rollout'])) {
             return null;
         }
@@ -205,7 +208,7 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
         return null;
     }
 
-    private function _assignedVariant(array $flag, $contextValue, $flagKey, array $rollout) {
+    private function _assignedVariant(array $flag, string $contextValue, string $flagKey, array $rollout): ?FeatureFlags_MixpanelSelectedVariant {
         if (isset($rollout['variant_override']['key'])) {
             $override = $this->_matchingVariant($rollout['variant_override']['key'], $flag);
             if ($override !== null) {
@@ -252,7 +255,7 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
         );
     }
 
-    private function _runtimeRulesSatisfied(array $rollout, array $context) {
+    private function _runtimeRulesSatisfied(array $rollout, array $context): bool {
         if (isset($rollout['runtime_evaluation_rule']) && $rollout['runtime_evaluation_rule']) {
             $params = $this->_runtimeParameters($context);
             if ($params === null) {
@@ -286,7 +289,7 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
         return true;
     }
 
-    private function _legacyRuntimeRuleSatisfied(array $definition, array $context) {
+    private function _legacyRuntimeRuleSatisfied(array $definition, array $context): bool {
         $params = $this->_runtimeParameters($context);
         if ($params === null) {
             $this->_handleError(
@@ -315,7 +318,7 @@ class FeatureFlags_MixpanelLocalFlags extends FeatureFlags_MixpanelFlagsBase {
         return true;
     }
 
-    private function _runtimeParameters(array $context) {
+    private function _runtimeParameters(array $context): ?array {
         if (!isset($context['custom_properties']) || !is_array($context['custom_properties'])) {
             return null;
         }

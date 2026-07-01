@@ -17,7 +17,7 @@
         }
     ],
     "require": {
-        "php": ">=7.2",
+        "php": ">=8.1",
         "jwadhams/json-logic-php": "^1.5",
         "symfony/polyfill-mbstring": "^1.27"
     },

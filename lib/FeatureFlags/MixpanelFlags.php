@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 require_once(dirname(__FILE__) . "/MixpanelLocalFlags.php");
 require_once(dirname(__FILE__) . "/MixpanelRemoteFlags.php");
 
@@ -20,21 +22,19 @@ require_once(dirname(__FILE__) . "/MixpanelRemoteFlags.php");
 class FeatureFlags_MixpanelFlags {
 
     /**
-     * Evaluation mode values for the `mode` config key. PHP 7.x has no
-     * native enums, but these constants give callers an IDE-checkable,
-     * grep-able alternative to bare string literals. The raw strings
-     * remain valid input — these are exact aliases.
+     * Evaluation mode values for the `mode` config key. These constants
+     * give callers an IDE-checkable, grep-able alternative to bare string
+     * literals. The raw strings remain valid input — these are exact aliases.
      */
     const MODE_LOCAL  = 'local';
     const MODE_REMOTE = 'remote';
 
-    /** @var FeatureFlags_MixpanelFlagsBase */
-    private $_provider;
+    private FeatureFlags_MixpanelFlagsBase $_provider;
 
-    /** @var string one of the MODE_* constants */
-    private $_mode;
+    /** One of the MODE_* constants. */
+    private string $_mode;
 
-    public function __construct($token, $version, $tracker, array $options) {
+    public function __construct(string $token, string $version, callable $tracker, array $options) {
         // No extension checks — FNV-1a hashing uses PHP's built-in
         // ext-hash (bundled in core), case folding uses
         // symfony/polyfill-mbstring (composer dep), HTTP uses the
@@ -71,68 +71,69 @@ class FeatureFlags_MixpanelFlags {
         }
     }
 
-    /** @return string 'local' or 'remote' */
-    public function getMode() {
+    public function getMode(): string {
         return $this->_mode;
     }
 
-    /** @return FeatureFlags_MixpanelFlagsBase */
-    public function getProvider() {
+    public function getProvider(): FeatureFlags_MixpanelFlagsBase {
         return $this->_provider;
     }
 
     /**
      * Fetch flag definitions from the server. Local mode only; no-op
      * (returns true) in remote mode.
-     *
-     * @return bool true on success
      */
-    public function loadDefinitions() {
+    public function loadDefinitions(): bool {
         if ($this->_provider instanceof FeatureFlags_MixpanelLocalFlags) {
             return $this->_provider->loadDefinitions();
         }
         return true;
     }
 
-    /** @return bool */
-    public function areFlagsReady() {
+    public function areFlagsReady(): bool {
         if ($this->_provider instanceof FeatureFlags_MixpanelLocalFlags) {
             return $this->_provider->areFlagsReady();
         }
         return true;
     }
 
-    /** @return int|null */
-    public function lastSyncedAt() {
+    public function lastSyncedAt(): ?int {
         if ($this->_provider instanceof FeatureFlags_MixpanelLocalFlags) {
             return $this->_provider->lastSyncedAt();
         }
         return null;
     }
 
-    public function getVariant($flagKey, FeatureFlags_MixpanelSelectedVariant $fallback, array $context, $reportExposure = true) {
+    public function getVariant(
+        string $flagKey,
+        FeatureFlags_MixpanelSelectedVariant $fallback,
+        array $context,
+        bool $reportExposure = true
+    ): FeatureFlags_MixpanelSelectedVariant {
         return $this->_provider->getVariant($flagKey, $fallback, $context, $reportExposure);
     }
 
-    public function getVariantValue($flagKey, $fallbackValue, array $context) {
+    public function getVariantValue(string $flagKey, mixed $fallbackValue, array $context): mixed {
         return $this->_provider->getVariantValue($flagKey, $fallbackValue, $context);
     }
 
-    public function isEnabled($flagKey, array $context) {
+    public function isEnabled(string $flagKey, array $context): bool {
         return $this->_provider->isEnabled($flagKey, $context);
     }
 
-    public function getAllVariants(array $context) {
+    public function getAllVariants(array $context): array {
         return $this->_provider->getAllVariants($context);
     }
 
-    public function trackExposure($flagKey, FeatureFlags_MixpanelSelectedVariant $variant, array $context) {
+    public function trackExposure(
+        string $flagKey,
+        FeatureFlags_MixpanelSelectedVariant $variant,
+        array $context
+    ): void {
         $this->_provider->trackExposure($flagKey, $variant, $context);
     }
 
-    public function shutdown() {
-        if ($this->_provider !== null) {
-            $this->_provider->shutdown();
-        }
+    public function shutdown(): void {
+        $this->_provider->shutdown();
     }
 }

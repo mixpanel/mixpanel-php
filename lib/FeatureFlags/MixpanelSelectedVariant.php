@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * A feature-flag variant after evaluation.
  *
@@ -33,35 +35,32 @@ class FeatureFlags_MixpanelSelectedVariant {
     const REASON_BACKEND_ERROR       = 'BACKEND_ERROR';
     const REASON_NOT_READY           = 'NOT_READY';
 
-    /** @var string|null variant key — null when this instance is a fallback */
-    public $variantKey;
+    /** Variant key — null when this instance is a fallback. */
+    public ?string $variantKey;
 
-    /** @var mixed the value the flag resolves to (bool, string, number, array, ...) */
-    public $variantValue;
+    /** The value the flag resolves to. Genuinely arbitrary — bool, string, number, array, object, or null. */
+    public mixed $variantValue;
 
-    /** @var string|null */
-    public $experimentId;
+    public ?string $experimentId;
 
-    /** @var bool|null */
-    public $isExperimentActive;
+    public ?bool $isExperimentActive;
 
-    /** @var bool|null */
-    public $isQaTester;
+    public ?bool $isQaTester;
 
-    /** @var string|null one of SOURCE_*; set by the providers on every returned variant */
-    public $variantSource;
+    /** One of SOURCE_*; set by the providers on every returned variant. */
+    public ?string $variantSource;
 
-    /** @var string|null null on success; one of the REASON_* constants when variantSource === SOURCE_FALLBACK */
-    public $fallbackReason;
+    /** Null on success; one of the REASON_* constants when variantSource === SOURCE_FALLBACK. */
+    public ?string $fallbackReason;
 
     public function __construct(
-        $variantKey = null,
-        $variantValue = null,
-        $experimentId = null,
-        $isExperimentActive = null,
-        $isQaTester = null,
-        $fallbackReason = null,
-        $variantSource = null
+        ?string $variantKey = null,
+        mixed $variantValue = null,
+        ?string $experimentId = null,
+        ?bool $isExperimentActive = null,
+        ?bool $isQaTester = null,
+        ?string $fallbackReason = null,
+        ?string $variantSource = null
     ) {
         $this->variantKey = $variantKey;
         $this->variantValue = $variantValue;
@@ -75,17 +74,14 @@ class FeatureFlags_MixpanelSelectedVariant {
     /**
      * Build a SelectedVariant from the JSON shape returned by the
      * /flags remote endpoint or stored inside a flag definition.
-     *
-     * @param array $data
-     * @return FeatureFlags_MixpanelSelectedVariant
      */
-    public static function fromArray(array $data) {
+    public static function fromArray(array $data): self {
         return new self(
-            isset($data['variant_key']) ? $data['variant_key'] : null,
+            isset($data['variant_key']) ? (string) $data['variant_key'] : null,
             isset($data['variant_value']) ? $data['variant_value'] : null,
-            isset($data['experiment_id']) ? $data['experiment_id'] : null,
-            isset($data['is_experiment_active']) ? $data['is_experiment_active'] : null,
-            isset($data['is_qa_tester']) ? $data['is_qa_tester'] : null
+            isset($data['experiment_id']) ? (string) $data['experiment_id'] : null,
+            isset($data['is_experiment_active']) ? (bool) $data['is_experiment_active'] : null,
+            isset($data['is_qa_tester']) ? (bool) $data['is_qa_tester'] : null
         );
     }
 
@@ -95,9 +91,8 @@ class FeatureFlags_MixpanelSelectedVariant {
      * fallback.
      *
      * @param string $source one of the SOURCE_* constants
-     * @return FeatureFlags_MixpanelSelectedVariant
      */
-    public function withSource($source) {
+    public function withSource(string $source): self {
         $clone = clone $this;
         $clone->variantSource = $source;
         $clone->fallbackReason = null;
@@ -111,19 +106,15 @@ class FeatureFlags_MixpanelSelectedVariant {
      * caller's fallback without mutating their object.
      *
      * @param string $reason one of the REASON_* constants
-     * @return FeatureFlags_MixpanelSelectedVariant
      */
-    public function withFallbackReason($reason) {
+    public function withFallbackReason(string $reason): self {
         $clone = clone $this;
         $clone->variantSource = self::SOURCE_FALLBACK;
         $clone->fallbackReason = $reason;
         return $clone;
     }
 
-    /**
-     * @return array
-     */
-    public function toArray() {
+    public function toArray(): array {
         return array(
             'variant_key'          => $this->variantKey,
             'variant_value'        => $this->variantValue,

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 require_once(dirname(__FILE__) . "/MixpanelFlagsBase.php");
 
 /**
@@ -15,13 +17,16 @@ class FeatureFlags_MixpanelRemoteFlags extends FeatureFlags_MixpanelFlagsBase {
 
     const FLAGS_PATH = '/flags';
 
-    protected function _evaluationMode() {
+    protected function _evaluationMode(): string {
         return 'remote';
     }
 
-    public function getVariant($flagKey, FeatureFlags_MixpanelSelectedVariant $fallback, array $context, $reportExposure = true) {
-        $reportExposure = (bool) $reportExposure;
-
+    public function getVariant(
+        string $flagKey,
+        FeatureFlags_MixpanelSelectedVariant $fallback,
+        array $context,
+        bool $reportExposure = true
+    ): FeatureFlags_MixpanelSelectedVariant {
         $startTime = microtime(true);
         try {
             $flags = $this->_fetchFlags($context, $flagKey);
@@ -53,7 +58,7 @@ class FeatureFlags_MixpanelRemoteFlags extends FeatureFlags_MixpanelFlagsBase {
         return $selected;
     }
 
-    public function getAllVariants(array $context) {
+    public function getAllVariants(array $context): array {
         try {
             $flags = $this->_fetchFlags($context, null);
         } catch (Exception $e) {
@@ -70,11 +75,10 @@ class FeatureFlags_MixpanelRemoteFlags extends FeatureFlags_MixpanelFlagsBase {
     }
 
     /**
-     * @param array $context
      * @param string|null $flagKey when set, the server scopes the response to that one flag
      * @return array map of flag_key => variant payload
      */
-    private function _fetchFlags(array $context, $flagKey) {
+    private function _fetchFlags(array $context, ?string $flagKey): array {
         $query = array(
             // The Python and Ruby SDKs URL-encode the context JSON
             // before placing it in the query string. http_build_query

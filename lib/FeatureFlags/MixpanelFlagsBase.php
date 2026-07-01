@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 require_once(dirname(__FILE__) . "/../Base/MixpanelBase.php");
 require_once(dirname(__FILE__) . "/MixpanelFlagsUtils.php");
 require_once(dirname(__FILE__) . "/MixpanelSelectedVariant.php");
@@ -15,22 +17,20 @@ require_once(dirname(__FILE__) . "/MixpanelSelectedVariant.php");
  */
 abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
 
-    /** @var string */
-    protected $_token;
+    protected string $_token;
 
-    /** @var string */
-    protected $_version;
+    protected string $_version;
 
     /** @var callable a closure that calls $mp->track($eventName, $properties + ['distinct_id' => $distinctId]) */
+    // Note: 'callable' is not a valid PHP property type. Kept untyped with phpdoc.
     protected $_tracker;
 
-    /** @var string */
-    protected $_apiHost;
+    protected string $_apiHost;
 
-    /** @var int seconds */
-    protected $_requestTimeout;
+    /** Seconds. */
+    protected int $_requestTimeout;
 
-    public function __construct($token, $version, $tracker, array $options) {
+    public function __construct(string $token, string $version, callable $tracker, array $options) {
         parent::__construct($options);
         $this->_token = $token;
         $this->_version = $version;
@@ -42,9 +42,9 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
         // This means EU/India endpoints or local mocks only need to be
         // configured once at the SDK level.
         if (isset($flagsOpts['api_host'])) {
-            $this->_apiHost = $flagsOpts['api_host'];
+            $this->_apiHost = (string) $flagsOpts['api_host'];
         } elseif (isset($options['host'])) {
-            $this->_apiHost = $options['host'];
+            $this->_apiHost = (string) $options['host'];
         } else {
             $this->_apiHost = 'api.mixpanel.com';
         }
@@ -52,7 +52,7 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
     }
 
     /** Release any held resources. Subclasses override to close cURL handles. */
-    public function shutdown() {
+    public function shutdown(): void {
         // default: nothing held
     }
 
@@ -67,7 +67,7 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
      * @return array  decoded JSON
      * @throws Exception on HTTP non-2xx or cURL transport error
      */
-    protected function _httpGet($path, array $query = array()) {
+    protected function _httpGet(string $path, array $query = array()): array {
         $params = array_merge(
             FeatureFlags_MixpanelFlagsUtils::commonQueryParams($this->_token, $this->_version),
             $query
@@ -139,13 +139,13 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
      * @return array
      */
     protected function _buildExposureProperties(
-        $flagKey,
+        string $flagKey,
         FeatureFlags_MixpanelSelectedVariant $variant,
-        $evaluationMode,
-        $latencyMs = null,
-        $startTime = null,
-        $endTime = null
-    ) {
+        string $evaluationMode,
+        ?float $latencyMs = null,
+        ?float $startTime = null,
+        ?float $endTime = null
+    ): array {
         $properties = array(
             'Experiment name'        => $flagKey,
             'Variant name'           => $variant->variantKey,
@@ -174,7 +174,7 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
      * `datetime.now().isoformat()` output shape so cross-SDK analytics
      * keyed on these properties parse consistently.
      */
-    private static function _formatIsoMicrotime($microtime) {
+    private static function _formatIsoMicrotime(float $microtime): string {
         $seconds = (int) floor($microtime);
         $micros  = (int) round(($microtime - $seconds) * 1000000);
         if ($micros >= 1000000) {
@@ -200,14 +200,14 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
      * @param float|null $latencyMs
      */
     protected function _trackExposure(
-        $flagKey,
+        string $flagKey,
         FeatureFlags_MixpanelSelectedVariant $variant,
         array $context,
-        $evaluationMode,
-        $latencyMs = null,
-        $startTime = null,
-        $endTime = null
-    ) {
+        string $evaluationMode,
+        ?float $latencyMs = null,
+        ?float $startTime = null,
+        ?float $endTime = null
+    ): void {
         if (!isset($context['distinct_id']) || $context['distinct_id'] === '' || $context['distinct_id'] === null) {
             // Don't drop silently — surface to the error_callback so the
             // caller learns why their exposure analytics are empty
@@ -234,10 +234,12 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
      * Forward an error to the user-supplied error_callback if one was
      * configured (matches the existing AbstractConsumer convention).
      *
-     * @param mixed $code
-     * @param string $message
+     * `$code` is a union because callers pass HTTP status codes (int),
+     * literal string codes ('mixpanel-flags'), Throwable::getCode()
+     * (which is int on Exception but string on PDOException), or 0/null
+     * placeholders.
      */
-    protected function _handleError($code, $message) {
+    protected function _handleError(int|string|null $code, string $message): void {
         if (isset($this->_options['error_callback']) && is_callable($this->_options['error_callback'])) {
             call_user_func($this->_options['error_callback'], $code, $message);
         } elseif ($this->_debug()) {
@@ -245,15 +247,20 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
         }
     }
 
-    abstract public function getVariant($flagKey, FeatureFlags_MixpanelSelectedVariant $fallback, array $context, $reportExposure = true);
+    abstract public function getVariant(
+        string $flagKey,
+        FeatureFlags_MixpanelSelectedVariant $fallback,
+        array $context,
+        bool $reportExposure = true
+    ): FeatureFlags_MixpanelSelectedVariant;
 
-    public function getVariantValue($flagKey, $fallbackValue, array $context) {
+    public function getVariantValue(string $flagKey, mixed $fallbackValue, array $context): mixed {
         $fallback = new FeatureFlags_MixpanelSelectedVariant(null, $fallbackValue);
         $variant = $this->getVariant($flagKey, $fallback, $context);
         return $variant->variantValue;
     }
 
-    public function isEnabled($flagKey, array $context) {
+    public function isEnabled(string $flagKey, array $context): bool {
         return $this->getVariantValue($flagKey, false, $context) === true;
     }
 
@@ -261,16 +268,15 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
      * Manually track exposure for a previously evaluated variant. Used
      * with getAllVariants() so callers can record exposure only for the
      * flags they actually consume.
-     *
-     * @param string $flagKey
-     * @param FeatureFlags_MixpanelSelectedVariant $variant
-     * @param array $context
      */
-    public function trackExposure($flagKey, FeatureFlags_MixpanelSelectedVariant $variant, array $context) {
+    public function trackExposure(
+        string $flagKey,
+        FeatureFlags_MixpanelSelectedVariant $variant,
+        array $context
+    ): void {
         $mode = $this->_evaluationMode();
         $this->_trackExposure($flagKey, $variant, $context, $mode);
     }
 
-    /** @return string */
-    abstract protected function _evaluationMode();
+    abstract protected function _evaluationMode(): string;
 }

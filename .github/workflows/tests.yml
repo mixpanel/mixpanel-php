@@ -22,10 +22,10 @@ jobs:
       # Surface every failing version on every run, not just the first.
       fail-fast: false
       matrix:
-        # Floor matches the `>=7.2` declared in composer.json. The
-        # 7.2 / 7.4 entries enforce the promise; 8.x covers every
+        # Floor matches the `>=8.1` declared in composer.json. The
+        # 8.1 entry enforces the promise; later minors cover every
         # currently-supported PHP release.
-        php: ['7.2', '7.4', '8.1', '8.3', '8.4']
+        php: ['8.1', '8.3', '8.4']
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v7.0.0

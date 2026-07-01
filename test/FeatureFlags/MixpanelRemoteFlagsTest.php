@@ -15,7 +15,7 @@ class _TestableRemoteFlags extends FeatureFlags_MixpanelRemoteFlags {
     /** @var string|null exception message to throw instead of returning a response */
     public $nextError = null;
 
-    protected function _httpGet($path, array $query = array()) {
+    protected function _httpGet(string $path, array $query = array()): array {
         $this->lastRequest = array('path' => $path, 'query' => $query);
         if ($this->nextError !== null) {
             throw new Exception($this->nextError);

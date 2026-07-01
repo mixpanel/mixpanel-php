@@ -160,9 +160,8 @@ class Mixpanel extends Base_MixpanelBase {
      * An instance of the MixpanelFlags facade, present only when the
      * caller passed an 'flags' entry in $options. Use it for
      * `$mp->flags->isEnabled(...)` and similar calls.
-     * @var FeatureFlags_MixpanelFlags|null
      */
-    public $flags;
+    public ?FeatureFlags_MixpanelFlags $flags = null;
 
 
     /**
