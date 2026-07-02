@@ -149,6 +149,40 @@ class MixpanelRemoteFlagsTest extends PHPUnit\Framework\TestCase {
         $this->assertCount(0, $this->_captured);
     }
 
+    public function testJsonEncodeFailureSurfacesAsBackendError() {
+        // Non-UTF-8 bytes in the context make json_encode return false.
+        // Previously http_build_query silently coerced that to an empty
+        // string, the server received context= and returned a null
+        // response, and the caller got REASON_FLAG_NOT_FOUND — with no
+        // hint that the real cause was serialization.
+        $errors = array();
+        $errorCallback = function ($code, $message) use (&$errors) {
+            $errors[] = $message;
+        };
+        $provider = new _TestableRemoteFlags(
+            'token',
+            '2.11.0',
+            function () {},
+            array(
+                'error_callback' => $errorCallback,
+                'flags' => array('mode' => 'remote'),
+            )
+        );
+
+        $context = array('distinct_id' => 'u1', 'bad' => "\xB1\x31");
+        $fallback = new FeatureFlags_MixpanelSelectedVariant(null, 'fb');
+        $variant = $provider->getVariant('my-flag', $fallback, $context);
+
+        $this->assertNull($provider->lastRequest, 'HTTP call should not have been attempted');
+        $this->assertEquals(
+            FeatureFlags_MixpanelSelectedVariant::REASON_BACKEND_ERROR,
+            $variant->fallbackReason
+        );
+        $this->assertEquals('fb', $variant->variantValue);
+        $this->assertCount(1, $errors);
+        $this->assertStringContainsString('JSON-encoded', $errors[0]);
+    }
+
     public function testGetAllVariantsOmitsFlagKeyQueryParam() {
         $this->_provider->nextResponse = array('flags' => array(
             'a' => array('variant_key' => 'on', 'variant_value' => 1),

@@ -79,12 +79,22 @@ class FeatureFlags_MixpanelRemoteFlags extends FeatureFlags_MixpanelFlagsBase {
      * @return array map of flag_key => variant payload
      */
     private function _fetchFlags(array $context, ?string $flagKey): array {
+        // The Python and Ruby SDKs URL-encode the context JSON before
+        // placing it in the query string. http_build_query would do
+        // that for us, but we pre-encode to JSON first so the server
+        // sees the expected JSON shape.
+        $encodedContext = json_encode($context);
+        if ($encodedContext === false) {
+            // json_encode returns false on non-UTF-8 strings, circular
+            // references, etc. http_build_query would coerce that to
+            // an empty string and the server would silently see
+            // context=, so surface the real cause instead.
+            throw new Exception(
+                'Mixpanel flags context could not be JSON-encoded: ' . json_last_error_msg()
+            );
+        }
         $query = array(
-            // The Python and Ruby SDKs URL-encode the context JSON
-            // before placing it in the query string. http_build_query
-            // would do that for us, but we pre-encode to JSON first so
-            // the server sees the expected JSON shape.
-            'context' => json_encode($context),
+            'context' => $encodedContext,
         );
         if ($flagKey !== null) {
             $query['flag_key'] = $flagKey;

@@ -68,6 +68,16 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
      * @throws Exception on HTTP non-2xx or cURL transport error
      */
     protected function _httpGet(string $path, array $query = array()): array {
+        // Match the guard AbstractConsumer already applies. On minimal
+        // PHP builds without ext-curl (some Alpine images, custom
+        // builds) curl_init would fatal with an unresolved function
+        // and give no hint that curl is what's missing.
+        if (!function_exists('curl_init')) {
+            throw new RuntimeException(
+                'Mixpanel feature flags require the PHP curl extension (ext-curl), which is not loaded.'
+            );
+        }
+
         $params = array_merge(
             FeatureFlags_MixpanelFlagsUtils::commonQueryParams($this->_token, $this->_version),
             $query
@@ -260,6 +270,15 @@ abstract class FeatureFlags_MixpanelFlagsBase extends Base_MixpanelBase {
         return $variant->variantValue;
     }
 
+    /**
+     * Returns true only when the variant value is the strict boolean
+     * `true`. Non-boolean truthy values (`1`, `"true"`, `"on"`, ...)
+     * intentionally return false — they signal a type mismatch on a
+     * flag that was expected to be a Mixpanel Feature Gate, and we
+     * fail closed rather than accept an ambiguous "on" signal.
+     * Matches the strict semantics of isEnabled in the Node, Ruby,
+     * Python, and Go SDKs.
+     */
     public function isEnabled(string $flagKey, array $context): bool {
         return $this->getVariantValue($flagKey, false, $context) === true;
     }
