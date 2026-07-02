@@ -1,19 +1,19 @@
 <?php
 
-class ConsumerStrategies_AbstractConsumerTest extends PHPUnit_Framework_TestCase {
+class ConsumerStrategies_AbstractConsumerTest extends PHPUnit\Framework\TestCase {
 
     /**
      * @var AbstractConsumer
      */
     protected $_instance = null;
 
-    protected function setUp()
+    protected function setUp() : void
     {
         parent::setUp();
         $this->_instance = new AbstractConsumer();
     }
 
-    protected function tearDown()
+    protected function tearDown() : void
     {
         parent::tearDown();
         $this->_instance = null;

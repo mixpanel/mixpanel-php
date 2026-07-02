@@ -4,6 +4,7 @@ require_once(dirname(__FILE__) . "/Base/MixpanelBase.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelPeople.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelEvents.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelGroups.php");
+require_once(dirname(__FILE__) . "/FeatureFlags/MixpanelFlags.php");
 
 /**
  * This is the main class for the Mixpanel PHP Library which provides all of the methods you need to track events,
@@ -109,6 +110,31 @@ require_once(dirname(__FILE__) . "/Producers/MixpanelGroups.php");
  */
 class Mixpanel extends Base_MixpanelBase {
 
+    /**
+     * Resolve the installed SDK version from Composer's runtime API.
+     * Used to populate the `lib_version` query param on feature-flag
+     * HTTP requests (matching Python/Ruby/Go/Java/Node).
+     *
+     * Composer 2.x ships `\Composer\InstalledVersions` in every install
+     * and returns the tag the package was installed from — so this
+     * stays accurate without any release-time bumping. Falls back to
+     * "unknown" on the off chance the package was loaded outside of a
+     * Composer-managed environment.
+     */
+    private static function _resolveLibVersion() {
+        if (class_exists('\Composer\InstalledVersions')) {
+            try {
+                $version = \Composer\InstalledVersions::getVersion('mixpanel/mixpanel-php');
+                if ($version !== null && $version !== '') {
+                    return $version;
+                }
+            } catch (\Throwable $e) {
+                // fall through to "unknown"
+            }
+        }
+        return 'unknown';
+    }
+
 
     /**
      * An instance of the MixpanelPeople class (used to create/update profiles)
@@ -128,7 +154,14 @@ class Mixpanel extends Base_MixpanelBase {
      * @var Producers_MixpanelPeople
      */
     public $group;
- 
+
+
+    /**
+     * An instance of the MixpanelFlags facade, present only when the
+     * caller passed an 'flags' entry in $options. Use it for
+     * `$mp->flags->isEnabled(...)` and similar calls.
+     */
+    public ?FeatureFlags_MixpanelFlags $flags = null;
 
 
     /**
@@ -136,7 +169,7 @@ class Mixpanel extends Base_MixpanelBase {
      * @var Mixpanel[]
      */
     private static $_instances = array();
-    
+
 
     /**
      * Instantiates a new Mixpanel instance.
@@ -148,6 +181,18 @@ class Mixpanel extends Base_MixpanelBase {
         $this->people = new Producers_MixpanelPeople($token, $options);
         $this->_events = new Producers_MixpanelEvents($token, $options);
         $this->group = new Producers_MixpanelGroups($token, $options);
+
+        if (isset($options['flags'])) {
+            $events = $this->_events;
+            // The flags providers track exposure by routing the event
+            // through the existing event queue, so it benefits from
+            // the same batching/flushing as every other tracked event.
+            $tracker = function ($distinctId, $eventName, $properties) use ($events) {
+                $properties['distinct_id'] = $distinctId;
+                $events->track($eventName, $properties);
+            };
+            $this->flags = new FeatureFlags_MixpanelFlags($token, self::_resolveLibVersion(), $tracker, $options);
+        }
     }
 
 
