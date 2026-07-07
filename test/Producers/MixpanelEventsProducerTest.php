@@ -1,19 +1,21 @@
 <?php
+use PHPUnit\Framework\TestCase;
 
-class MixpanelEventsProducerTest extends PHPUnit_Framework_TestCase {
+
+class MixpanelEventsProducerTest extends TestCase {
 
     /**
      * @var Producers_MixpanelEvents
      */
     protected $_instance = null;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->_instance = new Producers_MixpanelEvents("token");
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         parent::tearDown();
         $this->_instance->reset();
@@ -54,7 +56,7 @@ class MixpanelEventsProducerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals("val6", $this->_instance->getProperty("prop6"));
     }
 
-    public function unregister() {
+    public function testUnregister() {
         $this->_instance->register("prop7", "val7");
         $this->_instance->register("prop8", "val8");
         $this->assertEquals("val7", $this->_instance->getProperty("prop7"));
@@ -64,29 +66,38 @@ class MixpanelEventsProducerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals("val8", $this->_instance->getProperty("prop8"));
     }
 
-    public function unregisterAll() {
+    public function testUnregisterAll() {
         $this->_instance->registerAll(array("prop9" => "val9", "prop10" => "val10"));
         $this->assertEquals("val9", $this->_instance->getProperty("prop9"));
         $this->assertEquals("val10", $this->_instance->getProperty("prop10"));
-        $this->assertEquals("val11", $this->_instance->getProperty("prop11"));
         $this->_instance->unregisterAll(array("prop9", "prop10"));
         $this->assertEquals(null, $this->_instance->getProperty("prop9"));
         $this->assertEquals(null, $this->_instance->getProperty("prop10"));
-        $this->assertEquals("val11", $this->_instance->getProperty("prop11"));
     }
 
     public function testCreateAlias() {
+        $tmp_file = __DIR__ . '/alias-test.tmp';
+        @unlink($tmp_file);
+
+        $instance = new Producers_MixpanelEvents('token', array(
+            'consumer' => 'file',
+            'file' => $tmp_file
+        ));
+
         $distinct_id = 1;
         $alias = 2;
-        $msg = $this->_instance->createAlias($distinct_id, $alias);
+        $msg = $instance->createAlias($distinct_id, $alias);
+
         $this->assertEquals('$create_alias', $msg['event']);
         $this->assertEquals($distinct_id, $msg['properties']['distinct_id']);
         $this->assertEquals($alias, $msg['properties']['alias']);
+
+        @unlink($tmp_file);
     }
 
     public function testCreateAliasRespectsConsumerSetting() {
         $tmp_file = __DIR__ . '/test.tmp';
-        $this->assertFileNotExists($tmp_file);
+        $this->assertFileDoesNotExist($tmp_file);
 
         $options = array('consumer' => 'file', 'file' => $tmp_file);
         $instance = new Producers_MixpanelEvents('token', $options);

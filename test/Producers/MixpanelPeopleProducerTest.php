@@ -1,19 +1,21 @@
 <?php
+use PHPUnit\Framework\TestCase;
 
-class MixpanelPeopleProducerTest extends PHPUnit_Framework_TestCase {
+
+class MixpanelPeopleProducerTest extends TestCase {
 
     /**
      * @var Producers_MixpanelPeople
      */
     protected $_instance = null;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->_instance = new Producers_MixpanelPeople("token");
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         parent::tearDown();
         $this->_instance->reset();
@@ -64,6 +66,21 @@ class MixpanelPeopleProducerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals("John", $msg['$set']['name']);
     }
 
+
+    public function testSetWithEmptyPropsDoesNotEnqueue() {
+        $this->_instance->set(12345, array());
+        $this->assertSame(array(), $this->_instance->getQueue());
+    }
+
+    public function testSetOnceWithEmptyPropsDoesNotEnqueue() {
+        $this->_instance->setOnce(12345, array());
+        $this->assertSame(array(), $this->_instance->getQueue());
+    }
+
+    public function testRemoveWithEmptyPropsDoesNotEnqueue() {
+        $this->_instance->remove(12345, array());
+        $this->assertSame(array(), $this->_instance->getQueue());
+    }
 
     public function testSetOnce() {
         $this->_instance->setOnce(12345, array("name" => "John"), "192.168.0.1");
@@ -145,7 +162,7 @@ class MixpanelPeopleProducerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals("192.168.0.1", $msg['$ip']);
         $this->assertArrayHasKey('$set', $msg);
         $this->assertArrayHasKey('$transactions', $msg['$set']);
-        $this->assertSameSize(array(), $msg['$set']['$transactions']);
+        $this->assertCount(0, $msg['$set']['$transactions']);
     }
 
     public function testDeleteUser() {
