@@ -65,6 +65,21 @@ class MixpanelPeopleProducerTest extends PHPUnit_Framework_TestCase {
     }
 
 
+    public function testSetWithEmptyPropsDoesNotEnqueue() {
+        $this->_instance->set(12345, array());
+        $this->assertSame(array(), $this->_instance->getQueue());
+    }
+
+    public function testSetOnceWithEmptyPropsDoesNotEnqueue() {
+        $this->_instance->setOnce(12345, array());
+        $this->assertSame(array(), $this->_instance->getQueue());
+    }
+
+    public function testRemoveWithEmptyPropsDoesNotEnqueue() {
+        $this->_instance->remove(12345, array());
+        $this->assertSame(array(), $this->_instance->getQueue());
+    }
+
     public function testSetOnce() {
         $this->_instance->setOnce(12345, array("name" => "John"), "192.168.0.1");
         $queue = $this->_instance->getQueue();
