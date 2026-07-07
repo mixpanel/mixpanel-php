@@ -1,19 +1,21 @@
 <?php
+use PHPUnit\Framework\TestCase;
 
-class MixpanelPeopleProducerTest extends PHPUnit_Framework_TestCase {
+
+class MixpanelPeopleProducerTest extends TestCase {
 
     /**
      * @var Producers_MixpanelPeople
      */
     protected $_instance = null;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->_instance = new Producers_MixpanelPeople("token");
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         parent::tearDown();
         $this->_instance->reset();
@@ -160,7 +162,7 @@ class MixpanelPeopleProducerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals("192.168.0.1", $msg['$ip']);
         $this->assertArrayHasKey('$set', $msg);
         $this->assertArrayHasKey('$transactions', $msg['$set']);
-        $this->assertSameSize(array(), $msg['$set']['$transactions']);
+        $this->assertCount(0, $msg['$set']['$transactions']);
     }
 
     public function testDeleteUser() {
