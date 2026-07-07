@@ -39,6 +39,9 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      * @param boolean $ignore_alias If the $ignore_alias property is true, an alias look up will not be performed after ingestion. Otherwise, a lookup for the distinct ID will be performed, and replaced if a match is found
      */
     public function set($distinct_id, $props, $ip = null, $ignore_time = false, $ignore_alias = false) {
+        if (empty($props)) {
+            return;
+        }
         $payload = $this->_constructPayload($distinct_id, '$set', $props, $ip, $ignore_time, $ignore_alias);
         $this->enqueue($payload);
     }
@@ -53,6 +56,9 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      * @param boolean $ignore_alias If the $ignore_alias property is true, an alias look up will not be performed after ingestion. Otherwise, a lookup for the distinct ID will be performed, and replaced if a match is found     
      */
     public function setOnce($distinct_id, $props, $ip = null, $ignore_time = false, $ignore_alias = false) {
+        if (empty($props)) {
+            return;
+        }
         $payload = $this->_constructPayload($distinct_id, '$set_once', $props, $ip, $ignore_time, $ignore_alias);
         $this->enqueue($payload);
     }
@@ -68,6 +74,9 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      * @param boolean $ignore_alias If the $ignore_alias property is true, an alias look up will not be performed after ingestion. Otherwise, a lookup for the distinct ID will be performed, and replaced if a match is found     
      */
     public function remove($distinct_id, $props, $ip = null, $ignore_time = false, $ignore_alias = false) {
+        if (empty($props)) {
+            return;
+        }
         $payload = $this->_constructPayload($distinct_id, '$unset', $props, $ip, $ignore_time, $ignore_alias);
         $this->enqueue($payload);
     }
