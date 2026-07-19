@@ -125,7 +125,7 @@ class Mixpanel extends Base_MixpanelBase {
 
     /**
      * An instance of the MixpanelGroups class (used to create/update group profiles)
-     * @var Producers_MixpanelPeople
+     * @var Producers_MixpanelGroups
      */
     public $group;
  
