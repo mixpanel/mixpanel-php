@@ -1,4 +1,5 @@
 <?php
+require_once(dirname(__FILE__) . "/../MixpanelIdentity.php");
 
 /**
  * This a Base class which all Mixpanel classes extend from to provide some very basic
@@ -22,7 +23,8 @@ class Base_MixpanelBase {
         "people_endpoint"   => "/engage", // host relative endpoint for people updates
         "groups_endpoint"   => "/groups", // host relative endpoint for groups updates
         "use_ssl"           => true, // use ssl when available
-        "error_callback"    => null // callback to use on consumption failures
+        "error_callback"    => null, // callback to use on consumption failures
+        "hierarchical_groups" => false // true if the project uses hierarchical groups
     );
 
 
@@ -61,6 +63,45 @@ class Base_MixpanelBase {
      */
     protected function _debug() {
         return isset($this->_options["debug"]) && $this->_options["debug"] == true;
+    }
+
+
+    /**
+     * Returns true if this client was created for a hierarchical groups project. This option, set when the client
+     * is created, is the only switch for hierarchical groups behaviour: it is never inferred from the data.
+     * @return bool
+     */
+    protected function _isHierarchical() {
+        return isset($this->_options["hierarchical_groups"]) && $this->_options["hierarchical_groups"] == true;
+    }
+
+
+    /**
+     * Hierarchical groups is a project setting, so a hierarchical identity is only valid on a client created for a
+     * hierarchical groups project. Ingestion accepts the keys on any project but ignores them, so a mismatch would
+     * be silently mis-attributed.
+     * @param MixpanelIdentity $identity
+     * @throws InvalidArgumentException if the identity does not fit this project
+     */
+    protected function _requireIdentityMatchesProject($identity) {
+        if (!($identity instanceof MixpanelIdentity)) {
+            throw new InvalidArgumentException("identity must be a MixpanelIdentity, "
+                . (is_object($identity) ? get_class($identity) : gettype($identity)) . " given");
+        }
+        if ($identity->isHierarchical() && !$this->_isHierarchical()) {
+            throw new InvalidArgumentException($identity . " requires a hierarchical groups client: "
+                . "new Mixpanel(\$token, array('hierarchical_groups' => true))");
+        }
+        // The company is part of a hierarchical user's identity, not a one-time association. A $user_id sent without
+        // one resolves to a separate user that nothing reconciles later. A device id rescues that case: Mixpanel
+        // ignores the user id, keeps the event under the device, and links it to the company-scoped user once a
+        // later event carries all three.
+        if ($this->_isHierarchical() && $identity->getUserId() !== null && $identity->getCompanyId() === null
+                && $identity->getDeviceId() === null) {
+            throw new InvalidArgumentException($identity . " needs a company on a hierarchical groups project. "
+                . "A user id sent without one, and without a device id, names a separate user that cannot be merged "
+                . "afterwards.");
+        }
     }
 
 }
