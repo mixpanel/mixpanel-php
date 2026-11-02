@@ -204,8 +204,14 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
      * @param string|int $alias
      * @return array $msg
      * @throws Exception
+     * @throws BadMethodCallException on a hierarchical groups project
      */
     public function createAlias($distinct_id, $alias) {
+        if ($this->_isHierarchical()) {
+            throw new BadMethodCallException("createAlias is not supported for hierarchical groups projects, which "
+                . "identify a user by company and user id. Track with a MixpanelIdentity with a user_id and "
+                . "company_id instead.");
+        }
         $msg = array(
             "event"         => '$create_alias',
             "properties"    =>  array("distinct_id" => $distinct_id, "alias" => $alias, "token" => $this->_token)

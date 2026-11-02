@@ -476,13 +476,12 @@ class HierarchicalGroupsScenariosTest extends PHPUnit_Framework_TestCase {
     }
 
     public function testAliasUnsupported() {
-        // createAlias sends synchronously and does not check hierarchical groups
-        $this->_mp->createAlias(self::USER_ID, "alias_id");
-
-        $msg = $this->onlySent($this->_mp, self::TRACK);
-        $this->assertEquals('$create_alias', $msg['event']);
-        $this->assertEquals(array("distinct_id" => self::USER_ID, "alias" => "alias_id", "token" => "token"),
-            $msg['properties']);
+        // A user is identified by company and user id, so there is nothing to alias
+        $mp = $this->_mp;
+        $this->assertThrows("BadMethodCallException", function() use ($mp) {
+            $mp->createAlias(self::USER_ID, "alias_id");
+        });
+        $this->assertNothingSent($this->_mp);
     }
 
     // #endregion

@@ -364,6 +364,7 @@ class Mixpanel extends Base_MixpanelBase {
      * This is helpful when you want to associate a generated id (such as a session id) to a user id or username.
      * @param string|int $distinct_id
      * @param string|int $alias
+     * @throws BadMethodCallException on a hierarchical groups project
      */
     public function createAlias($distinct_id, $alias) {
         $this->_events->createAlias($distinct_id, $alias);
