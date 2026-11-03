@@ -565,11 +565,22 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         $this->assertCount(0, $this->_legacy->group->getQueue());
     }
 
-    public function testIdentityCompanyWinsOverForCompany() {
-        $this->_hg->forCompany("other")->people->set(self::hgUser(), array("role" => "admin"));
+    public function testForCompanyAcceptsAUserFromTheBoundCompany() {
+        $this->_hg->forCompany("acme")->people->set(self::hgUser(), array("role" => "admin"));
         $msg = self::lastMessage($this->_hg->group);
 
         $this->assertEquals("acme", $msg['$company_id']);
+    }
+
+    public function testForCompanyRefusesAUserFromAnotherCompany() {
+        $people = $this->_hg->forCompany("other")->people;
+        $this->assertThrows("InvalidArgumentException", function () use ($people) {
+            $people->set(HierarchicalGroupsTest::hgUserForClosure(), array("role" => "admin"));
+        });
+        $this->assertThrows("InvalidArgumentException", function () use ($people) {
+            $people->set('$company:acme|$user:user_123', array("role" => "admin"));
+        });
+        $this->assertCount(0, $this->_hg->group->getQueue());
     }
 
     public function testLegacyIdentityUsesEngage() {
@@ -754,7 +765,7 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         $this->assertNull($this->_hg->group->getCompanyId());
         $this->assertEquals("acme", $acme->group->getCompanyId());
         $this->assertEquals("other", $other->group->getCompanyId());
-        $this->assertSame($this->_hg->people, $acme->people);
+        $this->assertSame($this->_hg->people->getGroupsProducer(), $acme->people->getGroupsProducer());
 
         $acme->group->set("department", "finance", array("plan" => "x"));
         $other->group->set("department", "finance", array("plan" => "x"));

@@ -32,6 +32,12 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      */
     private $_groups = null;
 
+    /**
+     * The company a client bound with Mixpanel::forCompany() is bound to, or null
+     * @var string|int|null
+     */
+    private $_boundCompanyId = null;
+
 
     /**
      * Creates a new people producer.
@@ -268,6 +274,12 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
     private function _enqueueUserGroupUpdate($user_id, $company_id, $operation, $value, $ip, $ignore_time,
                                              $ignore_alias) {
         $this->_requireSupportedOperation($operation);
+        // The company is part of the user's identity, so a bound client only checks that it matches.
+        if ($this->_boundCompanyId !== null && (string) $company_id !== (string) $this->_boundCompanyId) {
+            throw new InvalidArgumentException("This client is bound to company \"" . $this->_boundCompanyId
+                . "\", but user \"" . $user_id . "\" belongs to company \"" . $company_id . "\". Update the user "
+                . "through a client for that company, or one without forCompany.");
+        }
         $payload = array(
             '$token' => $this->_token,
             '$group_key' => '$user_id',
@@ -348,6 +360,20 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
             throw new InvalidArgumentException($method . " does not accept a MixpanelIdentity; pass a distinct id. "
                 . "set, setOnce, remove, deleteUser and append of an array accept an identity.");
         }
+    }
+
+    /**
+     * Returns a people producer that refuses user profile updates for any company other than $company_id. It queues
+     * on the same groups producer; this producer is unchanged. Mixpanel::forCompany() uses it on hierarchical groups
+     * projects, where every user profile update goes to that groups producer.
+     * @param string|int $company_id
+     * @return Producers_MixpanelPeople
+     */
+    public function forCompany($company_id) {
+        $view = clone $this;
+        $view->reset();
+        $view->_boundCompanyId = $company_id;
+        return $view;
     }
 
     /**
