@@ -702,6 +702,67 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         }
     }
 
+    public function testCompanyProfileTakesItsCompanyFromItsGroupIdForEveryOperation() {
+        $group = $this->_hg->group;
+
+        $group->set('$company_id', "acme", array("tier" => "enterprise"));
+        $group->setOnce('$company_id', "acme", array("tier" => "enterprise"));
+        $group->remove('$company_id', "acme", array("tags" => "a"));
+        $group->union('$company_id', "acme", "tags", array("a"));
+        $group->deleteGroup('$company_id', "acme");
+
+        $queue = $group->getQueue();
+        $this->assertCount(5, $queue);
+        foreach ($queue as $msg) {
+            $this->assertEquals('$company_id', $msg['$group_key']);
+            $this->assertEquals("acme", $msg['$group_id']);
+            $this->assertSame("acme", $msg['$company_id']);
+        }
+        $this->assertEquals(array("tier" => "enterprise"), $queue[0]['$set']);
+    }
+
+    public function testCompanyProfileAcceptsAMatchingBoundCompany() {
+        $this->_hg->forCompany("acme")->group->set('$company_id', "acme", array("tier" => "ent"));
+        $msg = self::lastMessage($this->_hg->group);
+
+        $this->assertSame("acme", $msg['$company_id']);
+    }
+
+    public function testCompanyProfileRejectsADifferentBoundCompany() {
+        $other = $this->_hg->forCompany("other")->group;
+        $calls = array(
+            function () use ($other) { $other->set('$company_id', "acme", array("tier" => "ent")); },
+            function () use ($other) { $other->setOnce('$company_id', "acme", array("tier" => "ent")); },
+            function () use ($other) { $other->remove('$company_id', "acme", array("tags" => "a")); },
+            function () use ($other) { $other->union('$company_id', "acme", "tags", array("a")); },
+            function () use ($other) { $other->deleteGroup('$company_id', "acme"); },
+        );
+        foreach ($calls as $call) {
+            $e = $this->assertThrows("InvalidArgumentException", $call);
+            $this->assertMessageContains("company is its own id", $e);
+        }
+        $this->assertCount(0, $this->_hg->group->getQueue());
+    }
+
+    public function testCustomGroupAndUserProfileStillRequireACompany() {
+        $group = $this->_hg->group;
+        $this->assertThrows("LogicException", function () use ($group) {
+            $group->set("team_id", "acme", array("name" => "x"));
+        });
+        $this->assertThrows("LogicException", function () use ($group) {
+            $group->set('$user_id', "acme", array("name" => "x"));
+        });
+        $this->assertCount(0, $group->getQueue());
+    }
+
+    public function testLegacyCompanyIdGroupUnchanged() {
+        $this->_legacy->group->set('$company_id', "acme", array("tier" => "ent"));
+        $this->assertArrayNotHasKey('$company_id', self::lastMessage($this->_legacy->group));
+
+        $this->_legacy->forCompany("other")->group->set('$company_id', "acme", array("tier" => "ent"));
+        $this->assertEquals("other", self::lastMessage($this->_legacy->group)['$company_id']);
+    }
+
     public function testHierarchicalGroupWithoutCompanyIsRejected() {
         $group = $this->_hg->group;
         $e = $this->assertThrows("LogicException", function () use ($group) {

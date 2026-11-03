@@ -121,7 +121,7 @@ require_once(dirname(__FILE__) . "/Producers/MixpanelGroups.php");
  * $mp->identify($identity);
  * $mp->track("Signup");
  * $mp->people->set($identity, array("role" => "admin"));
- * $mp->forCompany("acme")->group->set('$company_id', "acme", array("tier" => "enterprise"));
+ * $mp->group->set('$company_id', "acme", array("tier" => "enterprise"));
  *
  */
 class Mixpanel extends Base_MixpanelBase {
@@ -171,10 +171,12 @@ class Mixpanel extends Base_MixpanelBase {
 
     /**
      * Returns a view of this client whose group producer adds a top-level $company_id to every group profile
-     * message. Hierarchical groups projects require $company_id on every group profile update:
+     * message. Hierarchical groups projects require $company_id on every group profile update; a company's own
+     * profile takes it from its group id, and other profiles get it from a view:
+     *
+     * $mp->group->set('$company_id', "acme", $company_properties);
      *
      * $acme = $mp->forCompany("acme");
-     * $acme->group->set('$company_id', "acme", $company_properties);
      * $acme->group->set("department", "finance", $department_properties);
      *
      * The view shares this client's queues, consumers and identity, so nothing is sent separately; this client is

@@ -446,11 +446,9 @@ class HierarchicalGroupsScenariosTest extends PHPUnit_Framework_TestCase {
     }
 
     public function testSetCompanyPropertyWithoutCompany() {
-        $mp = $this->_mp;
-        $this->assertThrows("LogicException", function () use ($mp) {
-            $mp->group->set('$company_id', HierarchicalGroupsScenariosTest::COMPANY_ID, array("tier" => "enterprise"));
-        });
-        $this->assertNothingSent($mp);
+        $this->_mp->group->set('$company_id', self::COMPANY_ID, array("tier" => "enterprise"));
+
+        $this->assertEquals(array("tier" => "enterprise"), $this->onlyCompanyUpdate($this->_mp, '$set'));
     }
 
     public function testSetCustomGroupPropertyWithoutCompany() {
