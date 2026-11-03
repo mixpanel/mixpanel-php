@@ -5,7 +5,6 @@ require_once(dirname(__FILE__) . "/Base/MixpanelBase.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelPeople.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelEvents.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelGroups.php");
-require_once(dirname(__FILE__) . "/Producers/MixpanelCompany.php");
 
 /**
  * This is the main class for the Mixpanel PHP Library which provides all of the methods you need to track events,
@@ -122,7 +121,7 @@ require_once(dirname(__FILE__) . "/Producers/MixpanelCompany.php");
  * $mp->identify($identity);
  * $mp->track("Signup");
  * $mp->people->set($identity, array("role" => "admin"));
- * $mp->forCompany("acme")->company->set(array("tier" => "enterprise"));
+ * $mp->forCompany("acme")->group->set('$company_id', "acme", array("tier" => "enterprise"));
  *
  */
 class Mixpanel extends Base_MixpanelBase {
@@ -146,14 +145,6 @@ class Mixpanel extends Base_MixpanelBase {
      * @var Producers_MixpanelPeople
      */
     public $group;
-
-
-    /**
-     * An instance of the MixpanelCompany class (used to update the profile of the company bound by forCompany()).
-     * Its methods throw LogicException on a client with no bound company.
-     * @var Producers_MixpanelCompany
-     */
-    public $company;
  
 
 
@@ -172,7 +163,6 @@ class Mixpanel extends Base_MixpanelBase {
     public function __construct($token, $options = array()) {
         parent::__construct($options);
         $this->group = new Producers_MixpanelGroups($token, $options);
-        $this->company = new Producers_MixpanelCompany($this->group);
         // identity-based user profile updates on a hierarchical groups project go to /groups, on the group queue
         $this->people = new Producers_MixpanelPeople($token, $options, $this->group);
         $this->_events = new Producers_MixpanelEvents($token, $options);
@@ -181,11 +171,10 @@ class Mixpanel extends Base_MixpanelBase {
 
     /**
      * Returns a view of this client whose group producer adds a top-level $company_id to every group profile
-     * message, and whose company producer updates the company's own profile. Hierarchical groups projects require
-     * $company_id on every group profile update:
+     * message. Hierarchical groups projects require $company_id on every group profile update:
      *
      * $acme = $mp->forCompany("acme");
-     * $acme->company->set($company_properties);
+     * $acme->group->set('$company_id', "acme", $company_properties);
      * $acme->group->set("department", "finance", $department_properties);
      *
      * The view shares this client's queues, consumers and identity, so nothing is sent separately; this client is
@@ -197,7 +186,6 @@ class Mixpanel extends Base_MixpanelBase {
     public function forCompany($company_id) {
         $view = clone $this;
         $view->group = $this->group->forCompany($company_id);
-        $view->company = new Producers_MixpanelCompany($view->group);
         return $view;
     }
 
