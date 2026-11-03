@@ -424,16 +424,15 @@ class HierarchicalGroupsScenariosTest extends PHPUnit_Framework_TestCase {
         $mp = $this->_mp;
         $identity = new MixpanelIdentity(array("user_id" => self::USER_ID));
 
-        $this->assertThrows("InvalidArgumentException", function () use ($mp, $identity) {
+        // The event is sent as given; a user profile needs the company.
+        $this->assertThrows("LogicException", function () use ($mp, $identity) {
             $mp->people->set($identity, array("plan" => "pro"));
         });
-        $this->assertThrows("InvalidArgumentException", function () use ($mp, $identity) {
-            $mp->track("HG Event!", array(), $identity);
-        });
-        $this->assertThrows("InvalidArgumentException", function () use ($mp, $identity) {
-            $mp->identify($identity);
-        });
         $this->assertNothingSent($mp);
+
+        $mp->track("HG Event!", array(), $identity);
+        $props = $this->onlyEvent($mp, "HG Event!", array('$user_id'));
+        $this->assertEquals(self::USER_ID, $props['$user_id']);
     }
 
     public function testSetUserPropertyWithoutUser() {

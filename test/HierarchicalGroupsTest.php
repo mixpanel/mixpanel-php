@@ -186,18 +186,12 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         $this->assertArrayNotHasKey('$company_id', $props);
     }
 
-    public function testUserWithoutCompanyOrDeviceIsRejectedForHierarchicalGroups() {
-        $events = $this->_hg_events;
-        $identity = self::identity(array("user_id" => "user_123"));
+    public function testUserWithoutCompanyIsSentAsGivenForHierarchicalGroups() {
+        $this->_hg_events->track("Signup", array(), self::identity(array("user_id" => "user_123")));
+        $props = self::lastEventProperties($this->_hg_events);
 
-        $e = $this->assertThrows("InvalidArgumentException", function () use ($events, $identity) {
-            $events->track("Signup", array(), $identity);
-        });
-        $this->assertMessageContains("cannot be merged", $e);
-        $this->assertThrows("InvalidArgumentException", function () use ($events, $identity) {
-            $events->identify($identity);
-        });
-        $this->assertCount(0, $events->getQueue());
+        $this->assertEquals("user_123", $props['$user_id']);
+        $this->assertArrayNotHasKey('$company_id', $props);
     }
 
     public function testUserWithDeviceButNoCompanyIsAllowedForHierarchicalGroups() {
@@ -651,9 +645,9 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         $this->assertMessageContains("company_id", $e);
     }
 
-    public function testIdentityProfileUpdateRejectsUserWithoutCompanyOrDevice() {
+    public function testIdentityProfileUpdateRequiresACompany() {
         $people = $this->_hg->people;
-        $this->assertThrows("InvalidArgumentException", function () use ($people) {
+        $this->assertThrows("LogicException", function () use ($people) {
             $people->set(new MixpanelIdentity(array("user_id" => "user_123")), array("plan" => "pro"));
         });
     }

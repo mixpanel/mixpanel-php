@@ -12,10 +12,11 @@
  * new MixpanelIdentity(array('device_id' => 'device_abc'));                         // anonymous, no user yet
  * new MixpanelIdentity(array('company_id' => 'acme'));                              // a company, no user
  *
- * Which combinations are valid depends on the project, so the Mixpanel client rather than this class decides.
- * On a hierarchical groups project the company is part of the user's identity: a $user_id sent without a
- * $company_id resolves to a different user that nothing reconciles later, so the client rejects it. A user who
- * belongs to two companies is two users, by design.
+ * Which combinations are valid depends on the project, so the Mixpanel client rather than this class decides. On a
+ * hierarchical groups project the company is part of the user's identity: a $user_id sent without a $company_id
+ * resolves to a different user that nothing reconciles later, so include the company whenever the user has one.
+ * Events still send a user id without one as given; user profile updates need the company. A user who belongs to two
+ * companies is two users, by design.
  *
  * Instances are immutable.
  */
