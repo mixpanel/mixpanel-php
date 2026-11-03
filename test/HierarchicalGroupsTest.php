@@ -614,7 +614,7 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
             $people->set(new MixpanelIdentity(array("company_id" => "acme")), array("tier" => "ent"));
         });
 
-        $this->assertMessageContains("group->set('\$company_id'", $e);
+        $this->assertMessageContains("forCompany(\$company_id)->company->set(\$props)", $e);
     }
 
     public function testDeviceIdentityCannotIdentifyAProfile() {
