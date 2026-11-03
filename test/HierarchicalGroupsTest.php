@@ -702,67 +702,6 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         }
     }
 
-    public function testCompanyProfileTakesItsCompanyFromItsGroupIdForEveryOperation() {
-        $group = $this->_hg->group;
-
-        $group->set('$company_id', "acme", array("tier" => "enterprise"));
-        $group->setOnce('$company_id', "acme", array("tier" => "enterprise"));
-        $group->remove('$company_id', "acme", array("tags" => "a"));
-        $group->union('$company_id', "acme", "tags", array("a"));
-        $group->deleteGroup('$company_id', "acme");
-
-        $queue = $group->getQueue();
-        $this->assertCount(5, $queue);
-        foreach ($queue as $msg) {
-            $this->assertEquals('$company_id', $msg['$group_key']);
-            $this->assertEquals("acme", $msg['$group_id']);
-            $this->assertSame("acme", $msg['$company_id']);
-        }
-        $this->assertEquals(array("tier" => "enterprise"), $queue[0]['$set']);
-    }
-
-    public function testCompanyProfileAcceptsAMatchingBoundCompany() {
-        $this->_hg->forCompany("acme")->group->set('$company_id', "acme", array("tier" => "ent"));
-        $msg = self::lastMessage($this->_hg->group);
-
-        $this->assertSame("acme", $msg['$company_id']);
-    }
-
-    public function testCompanyProfileRejectsADifferentBoundCompany() {
-        $other = $this->_hg->forCompany("other")->group;
-        $calls = array(
-            function () use ($other) { $other->set('$company_id', "acme", array("tier" => "ent")); },
-            function () use ($other) { $other->setOnce('$company_id', "acme", array("tier" => "ent")); },
-            function () use ($other) { $other->remove('$company_id', "acme", array("tags" => "a")); },
-            function () use ($other) { $other->union('$company_id', "acme", "tags", array("a")); },
-            function () use ($other) { $other->deleteGroup('$company_id', "acme"); },
-        );
-        foreach ($calls as $call) {
-            $e = $this->assertThrows("InvalidArgumentException", $call);
-            $this->assertMessageContains("company is its own id", $e);
-        }
-        $this->assertCount(0, $this->_hg->group->getQueue());
-    }
-
-    public function testCustomGroupAndUserProfileStillRequireACompany() {
-        $group = $this->_hg->group;
-        $this->assertThrows("LogicException", function () use ($group) {
-            $group->set("team_id", "acme", array("name" => "x"));
-        });
-        $this->assertThrows("LogicException", function () use ($group) {
-            $group->set('$user_id', "acme", array("name" => "x"));
-        });
-        $this->assertCount(0, $group->getQueue());
-    }
-
-    public function testLegacyCompanyIdGroupUnchanged() {
-        $this->_legacy->group->set('$company_id', "acme", array("tier" => "ent"));
-        $this->assertArrayNotHasKey('$company_id', self::lastMessage($this->_legacy->group));
-
-        $this->_legacy->forCompany("other")->group->set('$company_id', "acme", array("tier" => "ent"));
-        $this->assertEquals("other", self::lastMessage($this->_legacy->group)['$company_id']);
-    }
-
     public function testHierarchicalGroupWithoutCompanyIsRejected() {
         $group = $this->_hg->group;
         $e = $this->assertThrows("LogicException", function () use ($group) {
@@ -834,6 +773,80 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         $view->reset();
         $this->assertCount(0, $this->_hg->group->getQueue());
         $this->assertCount(0, $view->getQueue());
+    }
+
+    // #endregion
+    // #region Company profile
+
+    /**
+     * Pairs of a company call and the group call it must match, each taking a forCompany("acme") client
+     */
+    private static function companyAndGroupCalls() {
+        return array(
+            array(function ($mp) { $mp->company->set(array("tier" => "enterprise")); },
+                function ($mp) { $mp->group->set('$company_id', "acme", array("tier" => "enterprise")); }),
+            array(function ($mp) { $mp->company->set(array("tier" => "enterprise"), true); },
+                function ($mp) { $mp->group->set('$company_id', "acme", array("tier" => "enterprise"), true); }),
+            array(function ($mp) { $mp->company->setOnce(array("first_seen" => "2024-01-02")); },
+                function ($mp) { $mp->group->setOnce('$company_id', "acme", array("first_seen" => "2024-01-02")); }),
+            array(function ($mp) { $mp->company->remove(array("products" => "legacy"), true); },
+                function ($mp) { $mp->group->remove('$company_id', "acme", array("products" => "legacy"), true); }),
+            array(function ($mp) { $mp->company->union("products", array("analytics")); },
+                function ($mp) { $mp->group->union('$company_id', "acme", "products", array("analytics")); }),
+            array(function ($mp) { $mp->company->deleteCompany(); },
+                function ($mp) { $mp->group->deleteGroup('$company_id', "acme"); }),
+            array(function ($mp) { $mp->company->deleteCompany(true); },
+                function ($mp) { $mp->group->deleteGroup('$company_id', "acme", true); }),
+        );
+    }
+
+    public function testCompanyMethodsQueueExactlyWhatTheGroupCallQueues() {
+        foreach (array($this->_hg, $this->_legacy) as $mp) {
+            $acme = $mp->forCompany("acme");
+            foreach (self::companyAndGroupCalls() as $calls) {
+                $mp->group->reset();
+                call_user_func($calls[0], $acme);
+                call_user_func($calls[1], $acme);
+
+                $queue = $mp->group->getQueue();
+                $this->assertCount(2, $queue);
+                // $time is the only value that differs between two calls
+                unset($queue[0]['$time'], $queue[1]['$time']);
+                $this->assertSame(json_encode($queue[1]), json_encode($queue[0]));
+                $this->assertEquals('$company_id', $queue[0]['$group_key']);
+                $this->assertEquals("acme", $queue[0]['$group_id']);
+                $this->assertEquals("acme", $queue[0]['$company_id']);
+            }
+        }
+    }
+
+    public function testCompanyWithoutForCompanyIsRejected() {
+        foreach (array($this->_hg, $this->_legacy) as $mp) {
+            foreach (self::companyAndGroupCalls() as $calls) {
+                $call = $calls[0];
+                $e = $this->assertThrows("LogicException", function () use ($call, $mp) {
+                    call_user_func($call, $mp);
+                });
+                $this->assertMessageContains("forCompany", $e);
+            }
+            $this->assertCount(0, $mp->group->getQueue());
+        }
+    }
+
+    public function testForCompanyLeavesTheReceiverCompanyUnbound() {
+        $acme = $this->_hg->forCompany("acme");
+        $other = $acme->forCompany("other");
+
+        $acme->company->set(array("tier" => "enterprise"));
+        $this->assertEquals("acme", self::lastMessage($this->_hg->group)['$group_id']);
+        $other->company->set(array("tier" => "enterprise"));
+        $this->assertEquals("other", self::lastMessage($this->_hg->group)['$group_id']);
+        $this->assertEquals("other", self::lastMessage($this->_hg->group)['$company_id']);
+
+        $mp = $this->_hg;
+        $this->assertThrows("LogicException", function () use ($mp) {
+            $mp->company->set(array("tier" => "enterprise"));
+        });
     }
 
     // #endregion

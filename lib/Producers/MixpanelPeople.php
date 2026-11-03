@@ -244,7 +244,7 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
                     . "Device ids identify anonymous events, not profiles.");
             }
             throw new InvalidArgumentException("User profile updates require a user id, and " . $identity
-                . " has none. Use \$mp->group->set('\$company_id', \$company_id, \$props) "
+                . " has none. Use \$mp->forCompany(\$company_id)->group->set('\$company_id', \$company_id, \$props) "
                 . "to update the company's profile.");
         }
         if ($identity->getCompanyId() === null) {
