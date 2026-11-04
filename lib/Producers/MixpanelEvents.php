@@ -111,7 +111,7 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
      * @return mixed
      */
     public function getProperty($property) {
-        return $this->_super_properties[$property];
+        return $this->_super_properties[$property] ?? null;
     }
 
 
