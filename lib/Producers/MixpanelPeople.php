@@ -391,49 +391,54 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
     }
 
     /**
-     * Flush the queue (the groups producer's queue on a hierarchical groups project, where user profile updates are
-     * queued)
+     * Flush the queue. On a hierarchical groups project user profile updates are queued on the groups producer, so
+     * this also flushes that queue; messages added with enqueue() stay on this producer's own queue and are sent as
+     * given.
      * @param int $desired_batch_size
      * @return bool whether or not the flush was successful
      */
     public function flush($desired_batch_size = 50) {
         if ($this->_isHierarchical()) {
-            return $this->getGroupsProducer()->flush($desired_batch_size);
+            $succeeded = parent::flush($desired_batch_size);
+            return $this->getGroupsProducer()->flush($desired_batch_size) && $succeeded;
         }
         return parent::flush($desired_batch_size);
     }
 
     /**
-     * Empties the queue (the groups producer's queue on a hierarchical groups project, where user profile updates are
-     * queued) without persisting any of the messages
+     * Empties the queue without persisting any of the messages. On a hierarchical groups project this also empties
+     * the groups producer's queue, where user profile updates are queued.
      */
     public function reset() {
         if ($this->_isHierarchical()) {
             $this->getGroupsProducer()->reset();
-        } else {
-            parent::reset();
         }
+        parent::reset();
     }
 
     /**
-     * Returns the in-memory queue (the groups producer's queue on a hierarchical groups project, where user profile
-     * updates are queued)
+     * Returns the in-memory queue. On a hierarchical groups project this is any messages added with enqueue()
+     * followed by the groups producer's queue, where user profile updates are queued.
      * @return array
      */
     public function getQueue() {
         if ($this->_isHierarchical()) {
-            return $this->getGroupsProducer()->getQueue();
+            return array_merge(parent::getQueue(), $this->getGroupsProducer()->getQueue());
         }
         return parent::getQueue();
     }
 
     /**
      * On a hierarchical groups project user profile updates are queued on the groups producer, which flushes them
-     * when it is destructed; this producer leaves them to it
+     * when it is destructed; this producer flushes only messages added with enqueue()
      */
     public function __destruct() {
         if (!$this->_isHierarchical()) {
             parent::__destruct();
+            return;
+        }
+        $attempts = 0;
+        while (!parent::flush() && ++$attempts < 10) {
         }
     }
 

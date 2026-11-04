@@ -721,6 +721,52 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals("user_123", $sent[0][1]['$group_id']);
     }
 
+    public function testPeopleEnqueueIsSentAsGivenForHierarchicalGroups() {
+        $mp = new Mixpanel("token", array(
+            "hierarchical_groups" => true,
+            "consumers" => array("capture" => "HierarchicalGroupsTest_CaptureConsumer"),
+            "consumer" => "capture"
+        ));
+        HierarchicalGroupsTest_CaptureConsumer::$sent = array();
+        $raw = array('$token' => "token", '$distinct_id' => "user_123", '$set' => array("role" => "admin"));
+        $mp->people->enqueue($raw);
+        $mp->people->set(self::hgUser(), array("plan" => "enterprise"));
+
+        $this->assertCount(2, $mp->people->getQueue());
+        $this->assertEquals($raw, $mp->people->getQueue()[0]);
+        $this->assertTrue($mp->people->flush());
+        $this->assertCount(0, $mp->people->getQueue());
+        $sent = HierarchicalGroupsTest_CaptureConsumer::$sent;
+        HierarchicalGroupsTest_CaptureConsumer::$sent = array();
+
+        $this->assertCount(2, $sent);
+        $this->assertEquals(array("/engage", $raw), $sent[0]);
+        $this->assertEquals("/groups", $sent[1][0]);
+    }
+
+    public function testPeopleResetClearsEnqueuedMessagesForHierarchicalGroups() {
+        $this->_hg->people->enqueue(array('$distinct_id' => "user_123", '$set' => array("role" => "admin")));
+        $this->_hg->people->reset();
+
+        $this->assertCount(0, $this->_hg->people->getQueue());
+    }
+
+    public function testPeopleEnqueueIsSentOnDestructForHierarchicalGroups() {
+        $mp = new Mixpanel("token", array(
+            "hierarchical_groups" => true,
+            "consumers" => array("capture" => "HierarchicalGroupsTest_CaptureConsumer"),
+            "consumer" => "capture"
+        ));
+        HierarchicalGroupsTest_CaptureConsumer::$sent = array();
+        $mp->people->enqueue(array('$distinct_id' => "user_123", '$set' => array("role" => "admin")));
+        $mp = null;
+        $sent = HierarchicalGroupsTest_CaptureConsumer::$sent;
+        HierarchicalGroupsTest_CaptureConsumer::$sent = array();
+
+        $this->assertCount(1, $sent);
+        $this->assertEquals("/engage", $sent[0][0]);
+    }
+
     public function testForCompanyPeopleViewLeavesTheSharedQueueToTheClient() {
         $acme = $this->_hg->forCompany("acme");
         $acme->people->set(self::hgUser(), array("role" => "admin"));
