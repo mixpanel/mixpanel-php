@@ -379,6 +379,7 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
 
     /**
      * Returns the producer identity-based profile updates on a hierarchical groups project are queued on
+     * @internal Used by this producer's identity-based profile updates.
      * @return Producers_MixpanelGroups
      */
     public function getGroupsProducer() {
