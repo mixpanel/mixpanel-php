@@ -366,6 +366,7 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      * Returns a people producer that refuses user profile updates for any company other than $company_id. It queues
      * on the same groups producer; this producer is unchanged. Mixpanel::forCompany() uses it on hierarchical groups
      * projects, where every user profile update goes to that groups producer.
+     * @internal Use Mixpanel::forCompany().
      * @param string|int $company_id
      * @return Producers_MixpanelPeople
      */

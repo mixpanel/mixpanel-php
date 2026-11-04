@@ -129,6 +129,7 @@ class MixpanelIdentity {
     /**
      * Returns the event properties this identity sets (distinct_id, $user_id, $company_id, $device_id), omitting
      * unset keys.
+     * @internal Used by the event producer.
      * @return array
      */
     public function toProperties() {
@@ -145,6 +146,7 @@ class MixpanelIdentity {
 
     /**
      * Returns every property an identity can set, whether or not this one sets it.
+     * @internal Used by the event producer.
      * @return array
      */
     public static function propertyNames() {

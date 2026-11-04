@@ -32,6 +32,7 @@ class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
      *
      * The view shares this producer's queue and consumer, so its messages are flushed with this producer's; this
      * producer is unchanged. Available on any project, and harmless on one that does not use hierarchical groups.
+     * @internal Use Mixpanel::forCompany().
      * @param string|int $company_id the id of the top-level company
      * @return Producers_MixpanelGroups
      * @throws InvalidArgumentException if $company_id is empty
@@ -61,6 +62,7 @@ class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
 
     /**
      * Returns the company bound by forCompany(), or null
+     * @internal Used by the company producer.
      * @return string|int|null
      */
     public function getCompanyId() {
