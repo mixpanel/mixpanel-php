@@ -1,19 +1,21 @@
 <?php
+use PHPUnit\Framework\TestCase;
 
-class MixpanelGroupsProducerTest extends PHPUnit_Framework_TestCase {
+
+class MixpanelGroupsProducerTest extends TestCase {
 
     /**
      * @var Producers_MixpanelGroups
      */
     protected $_instance = null;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->_instance = new Producers_MixpanelGroups("token");
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         parent::tearDown();
         $this->_instance->reset();
@@ -97,9 +99,9 @@ class MixpanelGroupsProducerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals("Mixpanel", $msg['$group_id']);
         $this->assertEquals("token", $msg['$token']);
         $this->assertArrayNotHasKey('$ignore_time', $msg);
-        $this->assertArrayHasKey('$unset', $msg);
-        $this->assertArrayHasKey("industry", $msg['$unset']);
-        $this->assertEquals("tech", $msg['$unset']['industry']);
+        $this->assertArrayHasKey('$remove', $msg);
+        $this->assertArrayHasKey("industry", $msg['$remove']);
+        $this->assertEquals("tech", $msg['$remove']['industry']);
     }
 
 

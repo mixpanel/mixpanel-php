@@ -1,19 +1,21 @@
 <?php
+use PHPUnit\Framework\TestCase;
 
-class MixpanelBaseProducerTest extends PHPUnit_Framework_TestCase {
+
+class MixpanelBaseProducerTest extends TestCase {
 
     /**
      * @var _Producers_MixpanelBaseProducer
      */
     protected $_instance = null;
     protected $_file = null;
-    protected function setUp() {
+    protected function setUp(): void {
         parent::setUp();
         $this->_file = dirname(__FILE__)."/output-".time().".txt";
         $this->_instance = new _Producers_MixpanelBaseProducer("token", array("consumer" => "file", "debug" => true, "file" => $this->_file));
     }
 
-    protected function tearDown() {
+    protected function tearDown(): void {
         parent::tearDown();
         $this->_instance->reset();
         $this->_instance = null;
@@ -68,7 +70,11 @@ class MixpanelBaseProducerTest extends PHPUnit_Framework_TestCase {
         $queue = $this->_instance->getQueue();
         $this->assertEquals(1, count($queue));
         $this->_instance->flush();
-        $new_instance = new Producers_MixpanelEvents("token", array('max_queue_size' => 0));
+        $new_instance = new Producers_MixpanelEvents("token", array(
+            'max_queue_size' => 0,
+            'consumer' => 'file',
+            'file' => $this->_file
+        ));
         $new_instance->track("test");
         $queue = $new_instance->getQueue();
         $this->assertEquals(0, count($queue));
