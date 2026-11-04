@@ -171,11 +171,12 @@ class Mixpanel extends Base_MixpanelBase {
      */
     public function __construct($token, $options = array()) {
         parent::__construct($options);
-        $this->group = new Producers_MixpanelGroups($token, $options);
-        $this->company = new Producers_MixpanelCompany($this->group);
-        // identity-based user profile updates on a hierarchical groups project go to /groups, on the group queue
-        $this->people = new Producers_MixpanelPeople($token, $options, $this->group);
+        $this->people = new Producers_MixpanelPeople($token, $options);
         $this->_events = new Producers_MixpanelEvents($token, $options);
+        // identity-based user profile updates on a hierarchical groups project go to /groups, on the group queue.
+        // The producers are created in this order so the end-of-request flush runs /engage, /track, then /groups.
+        $this->group = $this->people->getGroupsProducer();
+        $this->company = new Producers_MixpanelCompany($this->group);
     }
 
 
