@@ -93,6 +93,19 @@ class MixpanelPeopleProducerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals("John", $msg['$set_once']['name']);
     }
 
+    public function testRemove() {
+        $this->_instance->remove(12345, array("name" => "John"), "192.168.0.1");
+        $queue = $this->_instance->getQueue();
+        $msg = $queue[count($queue)-1];
+
+        $this->assertEquals(12345, $msg['$distinct_id']);
+        $this->assertEquals("token", $msg['$token']);
+        $this->assertEquals("192.168.0.1", $msg['$ip']);
+        $this->assertArrayHasKey('$unset', $msg);
+        $this->assertArrayHasKey("name", $msg['$unset']);
+        $this->assertEquals("John", $msg['$unset']['name']);
+    }
+
     public function testIncrement() {
         $this->_instance->increment(12345, "logins", 1, "192.168.0.1");
         $queue = $this->_instance->getQueue();
