@@ -372,7 +372,8 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      */
     public function forCompany($company_id) {
         $view = clone $this;
-        $view->reset();
+        // the clone copied this producer's own queue; reset() would empty the shared groups queue
+        $view->_resetOwnQueue();
         $view->_boundCompanyId = $company_id;
         return $view;
     }
@@ -387,6 +388,60 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
             $this->_groups = new Producers_MixpanelGroups($this->_token, $this->_options);
         }
         return $this->_groups;
+    }
+
+    /**
+     * Flush the queue (the groups producer's queue on a hierarchical groups project, where user profile updates are
+     * queued)
+     * @param int $desired_batch_size
+     * @return bool whether or not the flush was successful
+     */
+    public function flush($desired_batch_size = 50) {
+        if ($this->_isHierarchical()) {
+            return $this->getGroupsProducer()->flush($desired_batch_size);
+        }
+        return parent::flush($desired_batch_size);
+    }
+
+    /**
+     * Empties the queue (the groups producer's queue on a hierarchical groups project, where user profile updates are
+     * queued) without persisting any of the messages
+     */
+    public function reset() {
+        if ($this->_isHierarchical()) {
+            $this->getGroupsProducer()->reset();
+        } else {
+            parent::reset();
+        }
+    }
+
+    /**
+     * Returns the in-memory queue (the groups producer's queue on a hierarchical groups project, where user profile
+     * updates are queued)
+     * @return array
+     */
+    public function getQueue() {
+        if ($this->_isHierarchical()) {
+            return $this->getGroupsProducer()->getQueue();
+        }
+        return parent::getQueue();
+    }
+
+    /**
+     * On a hierarchical groups project user profile updates are queued on the groups producer, which flushes them
+     * when it is destructed; this producer leaves them to it
+     */
+    public function __destruct() {
+        if (!$this->_isHierarchical()) {
+            parent::__destruct();
+        }
+    }
+
+    /**
+     * Empties this producer's own queue, never the groups producer's
+     */
+    private function _resetOwnQueue() {
+        parent::reset();
     }
 
     /**

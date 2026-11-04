@@ -1,5 +1,24 @@
 <?php
 
+/**
+ * Records every message a producer flushes, with the endpoint it is sent to
+ */
+class HierarchicalGroupsTest_CaptureConsumer extends ConsumerStrategies_AbstractConsumer {
+
+    /**
+     * Each sent message as array(endpoint, message)
+     * @var array
+     */
+    public static $sent = array();
+
+    public function persist($batch) {
+        foreach ($batch as $message) {
+            self::$sent[] = array($this->_options['endpoint'], $message);
+        }
+        return true;
+    }
+}
+
 class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
 
     /**
@@ -396,7 +415,8 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
             $this->assertEquals("acme", $msg['$company_id']);
             $this->assertArrayNotHasKey('$distinct_id', $msg);
         }
-        $this->assertCount(0, $people->getQueue());
+        // the people producer's queue is the groups queue its updates are on
+        $this->assertEquals($queue, $people->getQueue());
     }
 
     public function testClearChargesThrowsForHierarchicalGroups() {
@@ -511,7 +531,7 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals("admin", $msg['$set']['role']);
         $this->assertArrayNotHasKey('$distinct_id', $msg);
         $this->assertArrayNotHasKey('$company_id', $msg['$set']);
-        $this->assertCount(0, $this->_hg->people->getQueue());
+        $this->assertEquals($this->_hg->group->getQueue(), $this->_hg->people->getQueue());
     }
 
     public function testEveryIdentityProfileOperationReroutes() {
@@ -596,7 +616,7 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals("user_123", $msg['$group_id']);
         $this->assertEquals("acme", $msg['$company_id']);
         $this->assertArrayNotHasKey('$distinct_id', $msg);
-        $this->assertCount(0, $this->_hg->people->getQueue());
+        $this->assertEquals($this->_hg->group->getQueue(), $this->_hg->people->getQueue());
     }
 
     public function testRawDistinctIdIdentityProfileUpdateIsRejectedForHierarchicalGroups() {
@@ -660,6 +680,65 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals('$user_id', $msg['$group_key']);
         $this->assertEquals("acme", $msg['$company_id']);
         $people->getGroupsProducer()->reset();
+    }
+
+    public function testPeopleQueueIsTheGroupQueueForHierarchicalGroups() {
+        $people = $this->_hg->people;
+        $people->set(self::hgUser(), array("role" => "admin"));
+        $people->deleteUser(self::hgUser());
+
+        $this->assertCount(2, $people->getQueue());
+        $this->assertEquals($this->_hg->group->getQueue(), $people->getQueue());
+    }
+
+    public function testPeopleResetCancelsQueuedUserProfileUpdatesForHierarchicalGroups() {
+        $this->_hg->people->deleteUser(self::hgUser());
+        $this->_hg->people->reset();
+
+        $this->assertCount(0, $this->_hg->group->getQueue());
+        $this->assertCount(0, $this->_hg->people->getQueue());
+    }
+
+    public function testPeopleFlushSendsUserProfileUpdatesToGroupsOnceForHierarchicalGroups() {
+        $mp = new Mixpanel("token", array(
+            "hierarchical_groups" => true,
+            "consumers" => array("capture" => "HierarchicalGroupsTest_CaptureConsumer"),
+            "consumer" => "capture"
+        ));
+        HierarchicalGroupsTest_CaptureConsumer::$sent = array();
+        $mp->people->set(self::hgUser(), array("role" => "admin"));
+
+        $this->assertTrue($mp->people->flush());
+        $this->assertCount(0, $mp->group->getQueue());
+        // the group producer has nothing left to send, so the update is sent once
+        $mp->group->flush();
+        $mp = null;
+        $sent = HierarchicalGroupsTest_CaptureConsumer::$sent;
+        HierarchicalGroupsTest_CaptureConsumer::$sent = array();
+
+        $this->assertCount(1, $sent);
+        $this->assertEquals("/groups", $sent[0][0]);
+        $this->assertEquals("user_123", $sent[0][1]['$group_id']);
+    }
+
+    public function testForCompanyPeopleViewLeavesTheSharedQueueToTheClient() {
+        $acme = $this->_hg->forCompany("acme");
+        $acme->people->set(self::hgUser(), array("role" => "admin"));
+
+        // binding a view does not reset, and a view going away does not flush, the client's queue
+        $other = $this->_hg->forCompany("other");
+        $acme = $other = null;
+        $this->assertCount(1, $this->_hg->group->getQueue());
+        $this->assertEquals($this->_hg->group->getQueue(), $this->_hg->people->getQueue());
+    }
+
+    public function testPeopleQueueIsItsOwnForLegacy() {
+        $this->_legacy->people->set("user_123", array("role" => "admin"));
+        $this->_legacy->group->set("department", "finance", array("plan" => "x"));
+        $this->_legacy->people->reset();
+
+        $this->assertCount(0, $this->_legacy->people->getQueue());
+        $this->assertCount(1, $this->_legacy->group->getQueue());
     }
 
     // #endregion
