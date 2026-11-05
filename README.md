@@ -68,33 +68,6 @@ $mp->people->set(12345, array(
 ));
 ```
 
-Hierarchical Groups
--------------
-For a project that uses hierarchical groups, create the client with `'hierarchical_groups' => true` and identify users with a `MixpanelIdentity`, so events carry `$user_id` and `$company_id` and Mixpanel builds the distinct id from them:
-
-```php
-<?php
-$mp = Mixpanel::getInstance("MIXPANEL_PROJECT_TOKEN", array("hierarchical_groups" => true));
-$user = new MixpanelIdentity(array("user_id" => "user_123", "company_id" => "acme"));
-
-// every later event is sent with $user_id and $company_id
-$mp->identify($user);
-$mp->track("button clicked");
-
-// or for one event only
-$mp->track("button clicked", array("label" => "sign-up"), $user);
-
-// user profiles are group profiles keyed by $user_id within the company, sent to /groups
-$mp->people->set($user, array("role" => "admin"));
-
-// group profile updates need the company; forCompany shares the client's queues
-$acme = $mp->forCompany("acme");
-$acme->group->set('$company_id', "acme", array("tier" => "enterprise"));
-$acme->group->set("department", "finance", array("budget" => 100));
-```
-
-A `MixpanelIdentity` takes any of `distinct_id`, `user_id`, `company_id` and `device_id`. On a hierarchical groups project, a user id needs a company id (or a device id) and user profiles support only `set`, `setOnce`, `remove`, `deleteUser` and `append` of an array (sent as `$union`); `increment`, `append` of a single value, `trackCharge` and `clearCharges` throw `BadMethodCallException`, as does `createAlias`. User profile updates are never sent to `/engage` on a hierarchical groups project: pass a `MixpanelIdentity` with a user id and a company id, or a distinct id of the form `$company:{company}|$user:{user}` (directly or as the identity's `distinct_id`), which is split into its company and user and sent to `/groups`. Any other distinct id throws `InvalidArgumentException`. Group profile updates without a company throw `LogicException`, and identities that do not fit the project throw `InvalidArgumentException`. Events accept plain and combined distinct ids in either mode, and nothing changes without hierarchical groups.
-
 Production Notes
 -------------
 By default, data is sent using ssl over cURL. This works fine when you're tracking a small number of events or aren't concerned with the potentially blocking nature of the PHP cURL calls. However, this isn't very efficient when you're sending hundreds of events (such as in batch processing). Our library comes packaged with an easy way to use a persistent socket connection for much more efficient writes. To enable the persistent socket, simply pass `'consumer' => 'socket'` as an entry in the `$options` array when you instantiate the Mixpanel class. Additionally, you can contribute your own persistence implementation by creating a custom Consumer.
