@@ -1,9 +1,11 @@
 <?php
 
+require_once(dirname(__FILE__) . "/MixpanelIdentity.php");
 require_once(dirname(__FILE__) . "/Base/MixpanelBase.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelPeople.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelEvents.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelGroups.php");
+require_once(dirname(__FILE__) . "/Producers/MixpanelCompany.php");
 
 /**
  * This is the main class for the Mixpanel PHP Library which provides all of the methods you need to track events,
@@ -84,6 +86,11 @@ require_once(dirname(__FILE__) . "/Producers/MixpanelGroups.php");
  *      <td>In the CurlConsumer (non-forked), it is used to determine how long the cURL call has to execute.
  *      <td>30</td>
  *  </tr>
+ *  <tr>
+ *      <td>hierarchical_groups</td>
+ *      <td>Set to true if the project uses hierarchical groups. It enables the checks that keep hierarchical groups data valid; it never changes what a message that is valid either way looks like.</td>
+ *      <td>false</td>
+ *  </tr>
  * </table>
  *
  * Example: Tracking an Event
@@ -105,6 +112,17 @@ require_once(dirname(__FILE__) . "/Producers/MixpanelGroups.php");
  * '$phone'            => "5555555555",
  * 'Favorite Color'    => "red"
  * ));
+ *
+ * Example: Hierarchical Groups
+ * -------------
+ *
+ * $mp = Mixpanel::getInstance("MY_TOKEN", array("hierarchical_groups" => true));
+ *
+ * $identity = new MixpanelIdentity(array("user_id" => "user_123", "company_id" => "acme"));
+ * $mp->identify($identity);
+ * $mp->track("Signup");
+ * $mp->people->set($identity, array("role" => "admin"));
+ * $mp->forCompany("acme")->company->set(array("tier" => "enterprise"));
  *
  */
 class Mixpanel extends Base_MixpanelBase {
@@ -128,6 +146,14 @@ class Mixpanel extends Base_MixpanelBase {
      * @var Producers_MixpanelPeople
      */
     public $group;
+
+
+    /**
+     * An instance of the MixpanelCompany class (used to update the profile of the company bound by forCompany()).
+     * Its methods throw LogicException on a client with no bound company.
+     * @var Producers_MixpanelCompany
+     */
+    public $company;
  
 
 
@@ -147,7 +173,38 @@ class Mixpanel extends Base_MixpanelBase {
         parent::__construct($options);
         $this->people = new Producers_MixpanelPeople($token, $options);
         $this->_events = new Producers_MixpanelEvents($token, $options);
-        $this->group = new Producers_MixpanelGroups($token, $options);
+        // identity-based user profile updates on a hierarchical groups project go to /groups, on the group queue.
+        // The producers are created in this order so the end-of-request flush runs /engage, /track, then /groups.
+        $this->group = $this->people->getGroupsProducer();
+        $this->company = new Producers_MixpanelCompany($this->group);
+    }
+
+
+    /**
+     * Returns a view of this client whose group producer adds a top-level $company_id to every group profile
+     * message, and whose company producer updates the company's own profile. Hierarchical groups projects require
+     * $company_id on every group profile update:
+     *
+     * $acme = $mp->forCompany("acme");
+     * $acme->company->set($company_properties);
+     * $acme->group->set("department", "finance", $department_properties);
+     *
+     * The view shares this client's queues, consumers and identity, so nothing is sent separately; this client is
+     * unchanged. Identity-based people updates use the identity's own company; on a hierarchical groups project an
+     * identity with a user id but no company uses this one, and the view throws InvalidArgumentException for a user
+     * from another company.
+     * @param string|int $company_id the id of the top-level company
+     * @return Mixpanel
+     * @throws InvalidArgumentException if $company_id is empty
+     */
+    public function forCompany($company_id) {
+        $view = clone $this;
+        $view->group = $this->group->forCompany($company_id);
+        $view->company = new Producers_MixpanelCompany($view->group);
+        if ($this->_isHierarchical()) {
+            $view->people = $this->people->forCompany($company_id);
+        }
+        return $view;
     }
 
 
@@ -203,8 +260,13 @@ class Mixpanel extends Base_MixpanelBase {
     /**
      * Identify the user you want to associate to tracked events. The $anon_id must be UUID v4 format and not already merged to an $identified_id.
      * All identify calls with a new and valid $anon_id will trigger a track $identify event, and merge to the $identified_id.
-     * @param string|int $user_id
+     *
+     * Pass a MixpanelIdentity instead of a user id to send its keys (distinct_id, $user_id, $company_id, $device_id)
+     * with every later event, replacing any identity set earlier; give it a device_id rather than passing an $anon_id.
+     * Identifying with a user id afterwards clears the identity.
+     * @param string|int|MixpanelIdentity $user_id
      * @param string|int $anon_id [optional]
+     * @throws InvalidArgumentException if the identity does not fit this project
      */
     public function identify($user_id, $anon_id = null) {
         $this->_events->identify($user_id, $anon_id);
@@ -212,11 +274,25 @@ class Mixpanel extends Base_MixpanelBase {
 
     /**
      * Track an event defined by $event associated with metadata defined by $properties
+     *
+     * When an identity applies, either $identity or one set with identify(MixpanelIdentity), its keys replace any
+     * values for the same keys in $properties.
      * @param string $event
      * @param array $properties
+     * @param MixpanelIdentity|null $identity [optional] who this event belongs to, overriding identify()
+     * @throws InvalidArgumentException if the identity does not fit this project
      */
-    public function track($event, $properties = array()) {
-        $this->_events->track($event, $properties);
+    public function track($event, $properties = array(), $identity = null) {
+        $this->_events->track($event, $properties, $identity);
+    }
+
+
+    /**
+     * Returns the identity set by identify(MixpanelIdentity), or null if there is none
+     * @return MixpanelIdentity|null
+     */
+    public function getIdentity() {
+        return $this->_events->getIdentity();
     }
 
 
@@ -306,6 +382,7 @@ class Mixpanel extends Base_MixpanelBase {
      * This is helpful when you want to associate a generated id (such as a session id) to a user id or username.
      * @param string|int $distinct_id
      * @param string|int $alias
+     * @throws BadMethodCallException on a hierarchical groups project
      */
     public function createAlias($distinct_id, $alias) {
         $this->_events->createAlias($distinct_id, $alias);
