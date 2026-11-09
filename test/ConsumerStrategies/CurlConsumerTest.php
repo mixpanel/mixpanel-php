@@ -1,6 +1,6 @@
 <?php
 
-class ConsumerStrategies_CurlConsumerTest extends PHPUnit_Framework_TestCase {
+class ConsumerStrategies_CurlConsumerTest extends PHPUnit\Framework\TestCase {
 
     public function testSettings() {
         $consumer = new CurlConsumer(array(
@@ -78,8 +78,8 @@ class ConsumerStrategies_CurlConsumerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals($expected, $cmd);
 
         // The dangerous metacharacters must live inside single quotes, never bare.
-        $this->assertNotContains('"; touch', str_replace(escapeshellarg($url), '', $cmd));
-        $this->assertNotContains('`whoami`', str_replace(escapeshellarg($data), '', $cmd));
+        $this->assertStringNotContainsString('"; touch', str_replace(escapeshellarg($url), '', $cmd));
+        $this->assertStringNotContainsString('`whoami`', str_replace(escapeshellarg($data), '', $cmd));
     }
 
     public function testOptions() {

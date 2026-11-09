@@ -1,19 +1,19 @@
 <?php
 
-class MixpanelEventsProducerTest extends PHPUnit_Framework_TestCase {
+class MixpanelEventsProducerTest extends PHPUnit\Framework\TestCase {
 
     /**
      * @var Producers_MixpanelEvents
      */
     protected $_instance = null;
 
-    protected function setUp()
+    protected function setUp() : void
     {
         parent::setUp();
         $this->_instance = new Producers_MixpanelEvents("token");
     }
 
-    protected function tearDown()
+    protected function tearDown() : void
     {
         parent::tearDown();
         $this->_instance->reset();
@@ -86,7 +86,7 @@ class MixpanelEventsProducerTest extends PHPUnit_Framework_TestCase {
 
     public function testCreateAliasRespectsConsumerSetting() {
         $tmp_file = __DIR__ . '/test.tmp';
-        $this->assertFileNotExists($tmp_file);
+        $this->assertFalse(file_exists($tmp_file));
 
         $options = array('consumer' => 'file', 'file' => $tmp_file);
         $instance = new Producers_MixpanelEvents('token', $options);
