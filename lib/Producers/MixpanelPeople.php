@@ -16,6 +16,7 @@ require_once(dirname(__FILE__) . "/MixpanelGroups.php");
  * Nothing is sent to /engage: every update goes to /groups as the $user_id group profile within the user's company,
  * named either by an identity with a user id and a company, or by a distinct id (given directly or as the identity's
  * distinct_id) of the form $company:{company}|$user:{user}. Any other distinct id throws InvalidArgumentException.
+ * An identity with a user id but no company uses the company a client bound with Mixpanel::forCompany() is bound to.
  */
 class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
 
@@ -86,6 +87,7 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      */
     public function set($distinct_id, $props, $ip = null, $ignore_time = false, $ignore_alias = false) {
         if (empty($props)) {
+            $this->_validateProfileIdForEmptyUpdate($distinct_id);
             return;
         }
         $this->_enqueueProfileUpdate($distinct_id, '$set', $props, $ip, $ignore_time, $ignore_alias);
@@ -102,6 +104,7 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      */
     public function setOnce($distinct_id, $props, $ip = null, $ignore_time = false, $ignore_alias = false) {
         if (empty($props)) {
+            $this->_validateProfileIdForEmptyUpdate($distinct_id);
             return;
         }
         $this->_enqueueProfileUpdate($distinct_id, '$set_once', $props, $ip, $ignore_time, $ignore_alias);
@@ -119,6 +122,7 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      */
     public function remove($distinct_id, $props, $ip = null, $ignore_time = false, $ignore_alias = false) {
         if (empty($props)) {
+            $this->_validateProfileIdForEmptyUpdate($distinct_id);
             return;
         }
         $this->_enqueueProfileUpdate($distinct_id, '$unset', $props, $ip, $ignore_time, $ignore_alias);
@@ -213,12 +217,26 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
     }
 
     /**
+     * set, setOnce and remove send nothing for empty properties. A MixpanelIdentity, or any id on a hierarchical
+     * groups project, is still validated first, so a call that could never be sent throws as it would with
+     * properties. A plain distinct id without hierarchical groups returns silently, as it always has.
+     * @param string|int|MixpanelIdentity $distinct_id
+     * @throws InvalidArgumentException|LogicException as _resolveProfileTarget()
+     */
+    private function _validateProfileIdForEmptyUpdate($distinct_id) {
+        if ($distinct_id instanceof MixpanelIdentity || $this->_isHierarchical()) {
+            $this->_resolveProfileTarget($distinct_id);
+        }
+    }
+
+    /**
      * Queues a profile update addressed by a distinct id or a MixpanelIdentity.
      *
      * Without hierarchical groups, a distinct id (given directly or as an identity's distinct_id) is the ordinary
      * /engage update for that distinct id. On a hierarchical groups project nothing is sent to /engage: the update
      * is sent to /groups as the $user_id group profile within the user's company, taken either from the identity's
-     * user_id and company_id or from a distinct id of the form $company:{company}|$user:{user}.
+     * user_id and company_id or from a distinct id of the form $company:{company}|$user:{user}. An identity with a
+     * user id but no company uses the company a client bound with Mixpanel::forCompany() is bound to.
      * @param string|int|MixpanelIdentity $distinct_id
      * @param string $operation
      * @param mixed $value
@@ -226,9 +244,29 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      * @param boolean $ignore_time
      * @param boolean $ignore_alias
      * @throws InvalidArgumentException if the distinct id or identity cannot name a user profile in this project
-     * @throws LogicException if a hierarchical groups identity names no company
+     * @throws LogicException if a hierarchical groups identity names no company and the client is not bound to one
      */
     private function _enqueueProfileUpdate($distinct_id, $operation, $value, $ip, $ignore_time, $ignore_alias) {
+        $target = $this->_resolveProfileTarget($distinct_id);
+        if (array_key_exists('distinct_id', $target)) {
+            $this->enqueue($this->_constructPayload($target['distinct_id'], $operation, $value, $ip, $ignore_time,
+                $ignore_alias));
+            return;
+        }
+        $this->_enqueueUserGroupUpdate($target['user_id'], $target['company_id'], $operation, $value, $ip,
+            $ignore_time, $ignore_alias);
+    }
+
+    /**
+     * Resolves which profile a distinct id or MixpanelIdentity names, without queueing anything.
+     * @param string|int|MixpanelIdentity $distinct_id
+     * @return array array('distinct_id' => ...) for an /engage update, or array('user_id' => ..., 'company_id' => ...)
+     * for a hierarchical groups user profile
+     * @throws InvalidArgumentException if the distinct id or identity cannot name a user profile in this project, or
+     * names a user from a company other than the bound one
+     * @throws LogicException if a hierarchical groups identity names no company and the client is not bound to one
+     */
+    private function _resolveProfileTarget($distinct_id) {
         if ($distinct_id instanceof MixpanelIdentity) {
             $identity = $distinct_id;
             $this->_requireIdentityMatchesProject($identity);
@@ -239,14 +277,11 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
 
         if ($identity === null || $distinct_id !== null) {
             if (!$this->_isHierarchical()) {
-                $this->enqueue($this->_constructPayload($distinct_id, $operation, $value, $ip, $ignore_time,
-                    $ignore_alias));
-                return;
+                return array('distinct_id' => $distinct_id);
             }
             list($company_id, $user_id) = $this->_requireCombinedDistinctId($distinct_id);
-            $this->_enqueueUserGroupUpdate($user_id, $company_id, $operation, $value, $ip, $ignore_time,
-                $ignore_alias);
-            return;
+            $this->_requireBoundCompany($user_id, $company_id);
+            return array('user_id' => $user_id, 'company_id' => $company_id);
         }
 
         if (!$this->_isHierarchical()) {
@@ -262,12 +297,29 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
                 . " has none. Use \$mp->forCompany(\$company_id)->company->set(\$props) to update the company's "
                 . "profile.");
         }
-        if ($identity->getCompanyId() === null) {
+        // The identity's own company; without one, the company a bound client is bound to
+        $company_id = $identity->getCompanyId() !== null ? $identity->getCompanyId() : $this->_boundCompanyId;
+        if ($company_id === null) {
             throw new LogicException("User profile updates for hierarchical groups projects require a company, and "
-                . $identity . " has none. Add company_id to the identity.");
+                . $identity . " has none. Add company_id to the identity, or send through \$mp->forCompany(\$company_id).");
         }
-        $this->_enqueueUserGroupUpdate($identity->getUserId(), $identity->getCompanyId(), $operation, $value, $ip,
-            $ignore_time, $ignore_alias);
+        $this->_requireBoundCompany($identity->getUserId(), $company_id);
+        return array('user_id' => $identity->getUserId(), 'company_id' => $company_id);
+    }
+
+    /**
+     * The company is part of the user's identity, so a bound client only checks that it matches. Ids may be strings
+     * or integers, so they are compared as strings.
+     * @param string|int $user_id
+     * @param string|int $company_id
+     * @throws InvalidArgumentException if the client is bound to a different company
+     */
+    private function _requireBoundCompany($user_id, $company_id) {
+        if ($this->_boundCompanyId !== null && (string) $company_id !== (string) $this->_boundCompanyId) {
+            throw new InvalidArgumentException("This client is bound to company \"" . $this->_boundCompanyId
+                . "\", but user \"" . $user_id . "\" belongs to company \"" . $company_id . "\". Update the user "
+                . "through a client for that company, or one without forCompany.");
+        }
     }
 
     /**
@@ -283,12 +335,6 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
     private function _enqueueUserGroupUpdate($user_id, $company_id, $operation, $value, $ip, $ignore_time,
                                              $ignore_alias) {
         $this->_requireSupportedOperation($operation);
-        // The company is part of the user's identity, so a bound client only checks that it matches.
-        if ($this->_boundCompanyId !== null && (string) $company_id !== (string) $this->_boundCompanyId) {
-            throw new InvalidArgumentException("This client is bound to company \"" . $this->_boundCompanyId
-                . "\", but user \"" . $user_id . "\" belongs to company \"" . $company_id . "\". Update the user "
-                . "through a client for that company, or one without forCompany.");
-        }
         $payload = array(
             '$token' => $this->_token,
             '$group_key' => '$user_id',

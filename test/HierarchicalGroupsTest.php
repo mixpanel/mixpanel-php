@@ -665,6 +665,108 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         $this->assertCount(0, $this->_hg->group->getQueue());
     }
 
+    public function testForCompanyUsesTheBoundCompanyForAUserOnlyIdentity() {
+        $people = $this->_hg->forCompany("acme")->people;
+        $identity = self::identity(array("user_id" => "user_123"));
+
+        $people->set($identity, array("plan" => "pro"));
+        $people->setOnce($identity, array("plan" => "pro"));
+        $people->append($identity, "tags", array("a"));
+        $people->remove($identity, array("plan"));
+        $people->deleteUser($identity);
+
+        $operations = array('$set', '$set_once', '$union', '$unset', '$delete');
+        $queue = $this->_hg->group->getQueue();
+        $this->assertCount(count($operations), $queue);
+        foreach ($queue as $i => $msg) {
+            $this->assertArrayHasKey($operations[$i], $msg);
+            $this->assertEquals('$user_id', $msg['$group_key']);
+            $this->assertEquals("user_123", $msg['$group_id']);
+            $this->assertSame("acme", $msg['$company_id']);
+            $this->assertArrayNotHasKey('$distinct_id', $msg);
+        }
+    }
+
+    public function testForCompanyUsesTheBoundCompanyForAUserAndDeviceIdentity() {
+        $this->_hg->forCompany("acme")->people->set(
+            self::identity(array("user_id" => "user_123", "device_id" => "device_abc")), array("plan" => "pro"));
+        $msg = self::lastMessage($this->_hg->group);
+
+        $this->assertSame("acme", $msg['$company_id']);
+        $this->assertEquals("user_123", $msg['$group_id']);
+    }
+
+    public function testUnboundClientStillRefusesAUserOnlyIdentity() {
+        $people = $this->_hg->people;
+        $this->assertThrows("LogicException", function () use ($people) {
+            $people->set(new MixpanelIdentity(array("user_id" => "user_123")), array("plan" => "pro"));
+        });
+        $this->assertCount(0, $this->_hg->group->getQueue());
+    }
+
+    public function testForCompanyComparesIntegerAndStringCompaniesAsStrings() {
+        $this->_hg->forCompany(42)->people->set(
+            self::identity(array("user_id" => "user_123", "company_id" => "42")), array("plan" => "pro"));
+        $this->assertSame("42", self::lastMessage($this->_hg->group)['$company_id']);
+
+        $this->_hg->forCompany("42")->people->set(
+            self::identity(array("user_id" => "user_123", "company_id" => 42)), array("plan" => "pro"));
+        $this->assertSame(42, self::lastMessage($this->_hg->group)['$company_id']);
+
+        $this->_hg->forCompany(42)->people->set(self::identity(array("user_id" => 7)), array("plan" => "pro"));
+        $msg = self::lastMessage($this->_hg->group);
+        $this->assertSame(42, $msg['$company_id']);
+        $this->assertSame(7, $msg['$group_id']);
+
+        $people = $this->_hg->forCompany(42)->people;
+        $this->assertThrows("InvalidArgumentException", function () use ($people) {
+            $people->set(new MixpanelIdentity(array("user_id" => 7, "company_id" => 43)), array("plan" => "pro"));
+        });
+        $this->assertCount(3, $this->_hg->group->getQueue());
+    }
+
+    public function testEmptyPropertiesStillValidateAnIdentity() {
+        $hg = $this->_hg->people;
+        $legacy = $this->_legacy->people;
+        $empties = array(array(), null);
+        foreach (array('set', 'setOnce', 'remove') as $method) {
+            foreach ($empties as $empty) {
+                // the same exceptions a non-empty call throws
+                $this->assertThrows("LogicException", function () use ($hg, $method, $empty) {
+                    $hg->$method(new MixpanelIdentity(array("user_id" => "user_123")), $empty);
+                });
+                $this->assertThrows("InvalidArgumentException", function () use ($hg, $method, $empty) {
+                    $hg->$method(new MixpanelIdentity(array("company_id" => "acme")), $empty);
+                });
+                $this->assertThrows("InvalidArgumentException", function () use ($hg, $method, $empty) {
+                    $hg->$method("user_123", $empty);
+                });
+                $other = $this->_hg->forCompany("other")->people;
+                $this->assertThrows("InvalidArgumentException", function () use ($other, $method, $empty) {
+                    $other->$method(HierarchicalGroupsTest::hgUserForClosure(), $empty);
+                });
+                $this->assertThrows("InvalidArgumentException", function () use ($legacy, $method, $empty) {
+                    $legacy->$method(HierarchicalGroupsTest::hgUserForClosure(), $empty);
+                });
+                $this->assertThrows("InvalidArgumentException", function () use ($legacy, $method, $empty) {
+                    $legacy->$method(new MixpanelIdentity(array("user_id" => "user_123")), $empty);
+                });
+
+                // valid ids still send nothing
+                $hg->$method(self::hgUser(), $empty);
+                $hg->$method('$company:acme|$user:user_123', $empty);
+                $this->_hg->forCompany("acme")->people->$method(self::identity(array("user_id" => "u")), $empty);
+                $legacy->$method(self::identity(array("distinct_id" => "user_123")), $empty);
+                // a plain distinct id without hierarchical groups returns silently, as on master
+                $legacy->$method("user_123", $empty);
+                $legacy->$method(null, $empty);
+            }
+        }
+        $this->assertCount(0, $this->_hg->group->getQueue());
+        $this->assertCount(0, $this->_legacy->people->getQueue());
+        $this->assertCount(0, $this->_legacy->group->getQueue());
+    }
+
     public function testLegacyIdentityUsesEngage() {
         $this->_legacy->people->set(self::identity(array("distinct_id" => "user_123")), array("role" => "admin"),
             "1.2.3.4");

@@ -190,8 +190,9 @@ class Mixpanel extends Base_MixpanelBase {
      * $acme->group->set("department", "finance", $department_properties);
      *
      * The view shares this client's queues, consumers and identity, so nothing is sent separately; this client is
-     * unchanged. Identity-based people updates use the identity's own company and do not need this one; on a
-     * hierarchical groups project the view throws InvalidArgumentException for a user from another company.
+     * unchanged. Identity-based people updates use the identity's own company; on a hierarchical groups project an
+     * identity with a user id but no company uses this one, and the view throws InvalidArgumentException for a user
+     * from another company.
      * @param string|int $company_id the id of the top-level company
      * @return Mixpanel
      * @throws InvalidArgumentException if $company_id is empty
