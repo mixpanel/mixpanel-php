@@ -23,8 +23,7 @@ class Base_MixpanelBase {
         "people_endpoint"   => "/engage", // host relative endpoint for people updates
         "groups_endpoint"   => "/groups", // host relative endpoint for groups updates
         "use_ssl"           => true, // use ssl when available
-        "error_callback"    => null, // callback to use on consumption failures
-        "hierarchical_groups" => false // true if the project uses hierarchical groups
+        "error_callback"    => null // callback to use on consumption failures
     );
 
 
@@ -72,7 +71,7 @@ class Base_MixpanelBase {
      * @return bool
      */
     protected function _isHierarchical() {
-        return isset($this->_options["hierarchical_groups"]) && $this->_options["hierarchical_groups"] == true;
+        return isset($this->_options["hierarchical_groups"]) && $this->_options["hierarchical_groups"] === true;
     }
 
 

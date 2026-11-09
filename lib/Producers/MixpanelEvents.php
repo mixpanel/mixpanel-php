@@ -35,6 +35,10 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
      * @throws InvalidArgumentException if the identity does not fit this project
      */
     public function track($event, $properties = array(), $identity = null) {
+        // Without hierarchical groups, track($event, $properties) ignored any extra argument; keep that.
+        if ($identity !== null && !($identity instanceof MixpanelIdentity) && !$this->_isHierarchical()) {
+            $identity = null;
+        }
         if ($identity !== null) {
             $this->_requireIdentityMatchesProject($identity);
         } else {

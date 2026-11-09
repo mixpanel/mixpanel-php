@@ -19,6 +19,27 @@ class HierarchicalGroupsTest_CaptureConsumer extends ConsumerStrategies_Abstract
     }
 }
 
+/**
+ * Records the options each consumer is created with
+ */
+class HierarchicalGroupsTest_OptionsConsumer extends ConsumerStrategies_AbstractConsumer {
+
+    /**
+     * The options the last consumer was created with
+     * @var array|null
+     */
+    public static $options = null;
+
+    public function __construct($options = array()) {
+        parent::__construct($options);
+        self::$options = $this->_options;
+    }
+
+    public function persist($batch) {
+        return true;
+    }
+}
+
 class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
 
     /**
@@ -288,6 +309,53 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         $this->assertThrows("InvalidArgumentException", function () use ($events) {
             $events->track("Signup", array(), "user_123");
         });
+    }
+
+    public function testLegacyTrackIgnoresANonIdentityThirdArgument() {
+        foreach (array("user_123", 42, array("user_id" => "user_123"), new stdClass()) as $extra) {
+            $events = new Producers_MixpanelEvents("token");
+            $events->identify("user_456");
+            $events->track("Signup", array("plan" => "pro", "time" => 1), $extra);
+            $plain = new Producers_MixpanelEvents("token");
+            $plain->identify("user_456");
+            $plain->track("Signup", array("plan" => "pro", "time" => 1));
+
+            $this->assertEquals($plain->getQueue(), $events->getQueue());
+            $events->reset();
+            $plain->reset();
+        }
+
+        $this->_legacy->track("Signup", array("plan" => "pro"), "user_123");
+        $property = new ReflectionProperty("Mixpanel", "_events");
+        $property->setAccessible(true);
+        $props = self::lastEventProperties($property->getValue($this->_legacy));
+        $this->assertEquals("pro", $props['plan']);
+        $this->assertArrayNotHasKey('$user_id', $props);
+    }
+
+    public function testFacadeTrackRejectsANonIdentityForHierarchicalGroups() {
+        $mp = $this->_hg;
+        $this->assertThrows("InvalidArgumentException", function () use ($mp) {
+            $mp->track("Signup", array(), "user_123");
+        });
+    }
+
+    public function testLegacyOptionsDoNotGainAHierarchicalGroupsKey() {
+        $consumers = array("capture" => "HierarchicalGroupsTest_OptionsConsumer");
+        new Producers_MixpanelEvents("token", array("consumer" => "capture", "consumers" => $consumers));
+        $this->assertArrayNotHasKey("hierarchical_groups", HierarchicalGroupsTest_OptionsConsumer::$options);
+
+        $curl = new ConsumerStrategies_CurlConsumer(array("host" => "api.mixpanel.com", "endpoint" => "/track"));
+        $this->assertArrayNotHasKey("hierarchical_groups", $curl->getOptions());
+    }
+
+    public function testOnlyTrueEnablesHierarchicalGroups() {
+        foreach (array("true", 1, "1") as $value) {
+            $events = new Producers_MixpanelEvents("token", array("hierarchical_groups" => $value));
+            $events->track("Signup", array(), "user_123");
+            $this->assertCount(1, $events->getQueue());
+            $events->reset();
+        }
     }
 
     public function testIdentifyWithIdentityAppliesToLaterEvents() {
