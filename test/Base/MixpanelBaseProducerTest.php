@@ -1,19 +1,19 @@
 <?php
 
-class MixpanelBaseProducerTest extends PHPUnit_Framework_TestCase {
+class MixpanelBaseProducerTest extends PHPUnit\Framework\TestCase {
 
     /**
      * @var _Producers_MixpanelBaseProducer
      */
     protected $_instance = null;
     protected $_file = null;
-    protected function setUp() {
+    protected function setUp() : void {
         parent::setUp();
         $this->_file = dirname(__FILE__)."/output-".time().".txt";
         $this->_instance = new _Producers_MixpanelBaseProducer("token", array("consumer" => "file", "debug" => true, "file" => $this->_file));
     }
 
-    protected function tearDown() {
+    protected function tearDown() : void {
         parent::tearDown();
         $this->_instance->reset();
         $this->_instance = null;

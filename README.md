@@ -1,4 +1,4 @@
-Mixpanel PHP Library [![Build Status](https://travis-ci.org/mixpanel/mixpanel-php.svg)](https://travis-ci.org/mixpanel/mixpanel-php)
+Mixpanel PHP Library
 ============
 
 ##### _May 13, 2026_ - [2.11.0](https://github.com/mixpanel/mixpanel-php/releases/tag/2.11.0)
@@ -82,7 +82,7 @@ Documentation
 * <a href="https://mixpanel.com/help/reference/php" target="_blank">Reference Docs</a>
 * <a href="http://mixpanel.github.io/mixpanel-php" target="_blank">Full API Reference</a>
 
-For further examples and options checkout out the "examples" folder
+For further examples and options check out the "examples" folder.
 
 Changelog
 -------------

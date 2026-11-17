@@ -1,20 +1,20 @@
 <?php
 
-class ConsumerStrategies_FileConsumerTest extends PHPUnit_Framework_TestCase {
+class ConsumerStrategies_FileConsumerTest extends PHPUnit\Framework\TestCase {
 
     /**
      * @var ConsumerStrategies_FileConsumer
      */
     protected $_instance = null;
     protected $_file = null;
-    protected function setUp()
+    protected function setUp() : void
     {
         parent::setUp();
         $this->_file = dirname(__FILE__)."/output-".time().".txt";
         $this->_instance = new ConsumerStrategies_FileConsumer(array("file" => $this->_file));
     }
 
-    protected function tearDown()
+    protected function tearDown() : void
     {
         parent::tearDown();
         $this->_instance = null;
