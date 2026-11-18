@@ -16,11 +16,42 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
 
 
     /**
+     * The identity set by identify(MixpanelIdentity), applied to every event that does not pass its own
+     * @var MixpanelIdentity|null
+     */
+    private $_identity = null;
+
+
+    /**
      * Track an event defined by $event associated with metadata defined by $properties
+     *
+     * When an identity applies, either the $identity argument or one set with identify(MixpanelIdentity), its keys
+     * (distinct_id, $user_id, $company_id, $device_id) are written after $properties and replace any values for the
+     * same keys; other properties are kept. Identity keys from super properties are not used, so an identity with
+     * no distinct id sends no distinct_id. On a hierarchical groups project the identity's $user_id and $company_id
+     * are sent as strings.
+     *
+     * On a hierarchical groups project, a distinct_id of the form $company:{company}|$user:{user} (in $properties or
+     * set by identify()) must agree with any $company_id or $user_id property, since Mixpanel would otherwise keep
+     * the property and drop the other part of the id.
      * @param string $event
      * @param array $properties
+     * @param MixpanelIdentity|null $identity [optional] who the event belongs to, for this event only
+     * @throws InvalidArgumentException if the identity does not fit this project, or on a hierarchical groups
+     * project if a combined distinct_id names a company or user that is empty or only whitespace, or one that
+     * differs from the $company_id or $user_id property or from the identity's own company_id or user_id
      */
-    public function track($event, $properties = array()) {
+    public function track($event, $properties = array(), $identity = null) {
+        // Without hierarchical groups, track($event, $properties) ignored any extra argument; keep that.
+        if ($identity !== null && !($identity instanceof MixpanelIdentity) && !$this->_isHierarchical()) {
+            $identity = null;
+        }
+        if ($identity !== null) {
+            $this->_requireIdentityMatchesProject($identity);
+            $this->_requireIdentityDistinctIdAgrees($identity);
+        } else {
+            $identity = $this->_identity;
+        }
 
         // if no token is passed in, use current token
         if (!isset($properties["token"])) $properties['token'] = $this->_token;
@@ -29,9 +60,46 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
         if (!isset($properties["time"])) $properties['time'] = microtime(true);
 
         $params['event'] = $event;
-        $params['properties'] = array_merge($this->_super_properties, $properties);
+        if ($identity === null) {
+            $params['properties'] = array_merge($this->_super_properties, $properties);
+            if ($this->_isHierarchical()) {
+                self::_requireCombinedDistinctIdMatches($params['properties']);
+            }
+        } else {
+            $super_properties = $this->_super_properties;
+            foreach (MixpanelIdentity::propertyNames() as $property) {
+                unset($super_properties[$property]);
+            }
+            $identity_properties = $identity->toProperties();
+            if ($this->_isHierarchical()) {
+                // Mixpanel does not store an integer $user_id, so ids are sent as strings
+                foreach (array('$user_id', '$company_id') as $property) {
+                    if (isset($identity_properties[$property])) {
+                        $identity_properties[$property] = (string) $identity_properties[$property];
+                    }
+                }
+            }
+            $params['properties'] = array_merge($super_properties, $properties, $identity_properties);
+        }
 
         $this->enqueue($params);
+    }
+
+
+    /**
+     * On a hierarchical groups project Mixpanel resolves an event from its $company_id and $user_id properties
+     * before its distinct_id, so a combined distinct_id that disagrees with them silently loses its user.
+     * @param array $properties the event's properties, including super properties
+     * @throws InvalidArgumentException if a combined distinct_id names a company or user that is empty or only
+     * whitespace, or one that differs from the $company_id or $user_id property
+     */
+    private static function _requireCombinedDistinctIdMatches($properties) {
+        if (!isset($properties['distinct_id'])) {
+            return;
+        }
+        self::_requireCombinedDistinctIdAgrees($properties['distinct_id'],
+            '$company_id', isset($properties['$company_id']) ? $properties['$company_id'] : null,
+            '$user_id', isset($properties['$user_id']) ? $properties['$user_id'] : null);
     }
 
 
@@ -119,10 +187,37 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
      * Identify the user you want to associate to tracked events. The $anon_id must be UUID v4 format (optionally with the
      * prefix '$device:') and not already merged to an $identified_id. All identify calls with a new and valid $anon_id will
      * trigger a track $identify event, and merge to the $identified_id.
-     * @param string|int $user_id
+     *
+     * Pass a MixpanelIdentity instead of a user id to send its keys (distinct_id, $user_id, $company_id, $device_id)
+     * with every later event, in place of any identity set earlier. Identify with a $device_id rather than an $anon_id
+     * in that case. Identifying with a user id afterwards clears the identity.
+     * @param string|int|MixpanelIdentity $user_id
      * @param string|int $anon_id [optional]
+     * @throws InvalidArgumentException if the identity does not fit this project, is passed with an $anon_id, or
+     * on a hierarchical groups project has a combined distinct_id naming a company or user that is empty or only
+     * whitespace, or one that differs from the identity's own company_id or user_id
+     * @throws BadMethodCallException on a hierarchical groups project, for a user id with an $anon_id: merging users
+     *     is not supported there
      */
     public function identify($user_id, $anon_id = null) {
+        if ($user_id instanceof MixpanelIdentity) {
+            $this->_requireIdentityMatchesProject($user_id);
+            $this->_requireIdentityDistinctIdAgrees($user_id);
+            if ($anon_id !== null) {
+                throw new InvalidArgumentException("identify(MixpanelIdentity) takes no anon_id; set device_id on "
+                    . $user_id . " instead");
+            }
+            // drop identity keys left by an earlier identify so they cannot leak into this identity's events
+            $this->unregisterAll(MixpanelIdentity::propertyNames());
+            $this->_identity = $user_id;
+            return;
+        }
+        if ($this->_isHierarchical() && !empty($anon_id)) {
+            throw new BadMethodCallException("identify with an anon_id merges users, which hierarchical groups "
+                . "projects do not support: they identify a user by company and user id. Identify with a "
+                . "MixpanelIdentity with a user_id and company_id instead. Nothing sent");
+        }
+        $this->_identity = null;
         $this->register("distinct_id", $user_id);
 
         $UUIDv4 = '/^(\$device:)?[a-zA-Z0-9]*-[a-zA-Z0-9]*-[a-zA-Z0-9]*-[a-zA-Z0-9]*-[a-zA-Z0-9]*$/i';
@@ -141,6 +236,15 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
 
 
     /**
+     * Returns the identity set by identify(MixpanelIdentity), or null if there is none
+     * @return MixpanelIdentity|null
+     */
+    public function getIdentity() {
+        return $this->_identity;
+    }
+
+
+    /**
      * An alias to be merged with the distinct_id. Each alias can only map to one distinct_id.
      * This is helpful when you want to associate a generated id (such as a session id) to a user id or username.
      *
@@ -151,8 +255,14 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
      * @param string|int $alias
      * @return array $msg
      * @throws Exception
+     * @throws BadMethodCallException on a hierarchical groups project
      */
     public function createAlias($distinct_id, $alias) {
+        if ($this->_isHierarchical()) {
+            throw new BadMethodCallException("createAlias is not supported for hierarchical groups projects, which "
+                . "identify a user by company and user id. Track with a MixpanelIdentity with a user_id and "
+                . "company_id instead.");
+        }
         $msg = array(
             "event"         => '$create_alias',
             "properties"    =>  array("distinct_id" => $distinct_id, "alias" => $alias, "token" => $this->_token)

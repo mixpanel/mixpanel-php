@@ -10,7 +10,6 @@
          convertWarningsToExceptions="true"
          processIsolation="false"
          stopOnFailure="false"
-         syntaxCheck="false"
          verbose="false">
          
   <testsuites>
@@ -20,10 +19,8 @@
   </testsuites>
   
   <filter>
-    <blacklist>
-      <directory>examples</directory>
-      <directory>vendor</directory>
-      <directory>test</directory>
-    </blacklist>
+    <whitelist>
+      <directory suffix=".php">lib</directory>
+    </whitelist>
   </filter>
 </phpunit>
