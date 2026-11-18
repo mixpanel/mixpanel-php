@@ -23,7 +23,7 @@ class HierarchicalGroupsScenariosTest_CaptureConsumer extends ConsumerStrategies
  * The hierarchical groups scenarios, one test each, asserting the endpoint each call hits and the exact message it
  * sends, or that it throws and sends nothing.
  */
-class HierarchicalGroupsScenariosTest extends PHPUnit_Framework_TestCase {
+class HierarchicalGroupsScenariosTest extends \PHPUnit\Framework\TestCase {
 
     const TRACK = "/track";
     const ENGAGE = "/engage";
@@ -47,7 +47,7 @@ class HierarchicalGroupsScenariosTest extends PHPUnit_Framework_TestCase {
      */
     protected $_legacy = null;
 
-    protected function setUp() {
+    protected function setUp(): void {
         parent::setUp();
         $capture = array(
             "consumers" => array("capture" => "HierarchicalGroupsScenariosTest_CaptureConsumer"),
@@ -58,7 +58,7 @@ class HierarchicalGroupsScenariosTest extends PHPUnit_Framework_TestCase {
         HierarchicalGroupsScenariosTest_CaptureConsumer::$sent = array();
     }
 
-    protected function tearDown() {
+    protected function tearDown(): void {
         parent::tearDown();
         foreach (array($this->_mp, $this->_legacy) as $mp) {
             $mp->reset();

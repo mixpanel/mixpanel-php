@@ -40,7 +40,7 @@ class HierarchicalGroupsTest_OptionsConsumer extends ConsumerStrategies_Abstract
     }
 }
 
-class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
+class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
 
     /**
      * @var Mixpanel
@@ -62,7 +62,7 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
      */
     protected $_legacy_events = null;
 
-    protected function setUp() {
+    protected function setUp(): void {
         parent::setUp();
         $this->_hg = new Mixpanel("token", array("hierarchical_groups" => true));
         $this->_legacy = new Mixpanel("token");
@@ -70,7 +70,7 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         $this->_legacy_events = new Producers_MixpanelEvents("token");
     }
 
-    protected function tearDown() {
+    protected function tearDown(): void {
         parent::tearDown();
         foreach (array($this->_hg, $this->_legacy) as $mp) {
             $mp->reset();
@@ -1176,7 +1176,7 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
             $events->identify("user_456", $anon);
             $this->fail("expected BadMethodCallException");
         } catch (BadMethodCallException $e) {
-            $this->assertContains("merges users", $e->getMessage());
+            $this->assertStringContainsString("merges users", $e->getMessage());
         }
         $this->assertCount(0, $events->getQueue());
         // nothing changed: a later event does not carry the refused user
@@ -1214,7 +1214,7 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
                 new Mixpanel("token", array("hierarchical_groups" => $value));
                 $this->fail("expected InvalidArgumentException for " . var_export($value, true));
             } catch (InvalidArgumentException $e) {
-                $this->assertContains("hierarchical_groups must be true or false", $e->getMessage());
+                $this->assertStringContainsString("hierarchical_groups must be true or false", $e->getMessage());
             }
         }
         new Mixpanel("token", array("hierarchical_groups" => false));
