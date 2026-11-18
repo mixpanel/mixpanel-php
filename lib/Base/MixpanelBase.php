@@ -93,4 +93,35 @@ class Base_MixpanelBase {
         }
     }
 
+
+    /**
+     * Splits a distinct id of the form $company:{company}|$user:{user} into its company and user. The company is
+     * the text before the first "|$user:" and the user is everything after it.
+     * @param mixed $distinct_id
+     * @return array array($company_id, $user_id), or null unless both parts are present and non-empty
+     * @throws InvalidArgumentException if the company or the user is only whitespace
+     */
+    protected static function _parseCombinedDistinctId($distinct_id) {
+        $prefix = '$company:';
+        $separator = '|$user:';
+        if (!is_string($distinct_id) || strpos($distinct_id, $prefix) !== 0) {
+            return null;
+        }
+        $rest = substr($distinct_id, strlen($prefix));
+        $at = strpos($rest, $separator);
+        if ($at === false) {
+            return null;
+        }
+        $company_id = substr($rest, 0, $at);
+        $user_id = (string) substr($rest, $at + strlen($separator));
+        if ($company_id === "" || $user_id === "") {
+            return null;
+        }
+        if (MixpanelIdentity::isBlank($company_id) || MixpanelIdentity::isBlank($user_id)) {
+            throw new InvalidArgumentException("distinct_id " . $distinct_id . " names a company or user that is "
+                . "only whitespace. Nothing sent");
+        }
+        return array($company_id, $user_id);
+    }
+
 }

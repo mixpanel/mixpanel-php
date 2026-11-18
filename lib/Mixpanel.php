@@ -195,7 +195,7 @@ class Mixpanel extends Base_MixpanelBase {
      * from another company.
      * @param string|int $company_id the id of the top-level company
      * @return Mixpanel
-     * @throws InvalidArgumentException if $company_id is empty
+     * @throws InvalidArgumentException if $company_id is empty or only whitespace
      */
     public function forCompany($company_id) {
         $view = clone $this;

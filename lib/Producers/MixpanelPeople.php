@@ -324,6 +324,7 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
 
     /**
      * Queues a hierarchical groups user profile update on /groups as the $user_id group profile within $company_id.
+     * Both ids are sent as strings, since Mixpanel does not store an integer $user_id.
      * @param string|int $user_id
      * @param string|int $company_id
      * @param string $operation
@@ -338,7 +339,7 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
         $payload = array(
             '$token' => $this->_token,
             '$group_key' => '$user_id',
-            '$group_id' => $user_id,
+            '$group_id' => (string) $user_id,
             '$time' => microtime(true),
             $operation => $value
         );
@@ -346,39 +347,15 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
         if ($ignore_time === true) $payload['$ignore_time'] = true;
         if ($ignore_alias === true) $payload['$ignore_alias'] = true;
         // $company_id must be top-level, not inside the operation payload
-        $payload['$company_id'] = $company_id;
+        $payload['$company_id'] = (string) $company_id;
         $this->getGroupsProducer()->enqueue($payload);
-    }
-
-    /**
-     * Splits a distinct id of the form $company:{company}|$user:{user} into its company and user. The company is
-     * the text before the first "|$user:" and the user is everything after it.
-     * @param mixed $distinct_id
-     * @return array array($company_id, $user_id), or null unless both parts are present and non-empty
-     */
-    private static function _parseCombinedDistinctId($distinct_id) {
-        $prefix = '$company:';
-        $separator = '|$user:';
-        if (!is_string($distinct_id) || strpos($distinct_id, $prefix) !== 0) {
-            return null;
-        }
-        $rest = substr($distinct_id, strlen($prefix));
-        $at = strpos($rest, $separator);
-        if ($at === false) {
-            return null;
-        }
-        $company_id = substr($rest, 0, $at);
-        $user_id = (string) substr($rest, $at + strlen($separator));
-        if ($company_id === "" || $user_id === "") {
-            return null;
-        }
-        return array($company_id, $user_id);
     }
 
     /**
      * @param mixed $distinct_id
      * @return array array($company_id, $user_id)
-     * @throws InvalidArgumentException unless $distinct_id has the form $company:{company}|$user:{user}
+     * @throws InvalidArgumentException unless $distinct_id has the form $company:{company}|$user:{user}, or if
+     * its company or user is only whitespace
      */
     private function _requireCombinedDistinctId($distinct_id) {
         $parts = self::_parseCombinedDistinctId($distinct_id);

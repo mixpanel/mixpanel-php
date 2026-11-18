@@ -35,11 +35,14 @@ class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
      * @internal Use Mixpanel::forCompany().
      * @param string|int $company_id the id of the top-level company
      * @return Producers_MixpanelGroups
-     * @throws InvalidArgumentException if $company_id is empty
+     * @throws InvalidArgumentException if $company_id is empty or only whitespace
      */
     public function forCompany($company_id) {
         if ((!is_string($company_id) && !is_int($company_id)) || $company_id === "") {
             throw new InvalidArgumentException("company_id must be a non-empty string or int");
+        }
+        if (MixpanelIdentity::isBlank($company_id)) {
+            throw new InvalidArgumentException("company_id must not be only whitespace");
         }
         $view = clone $this;
         $view->_bind($this->_root === null ? $this : $this->_root, $company_id);
@@ -61,11 +64,15 @@ class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
 
 
     /**
-     * Returns the company bound by forCompany(), or null
+     * Returns the company bound by forCompany(), or null. On a hierarchical groups project it is returned as a
+     * string, the form it is sent in, since Mixpanel does not store an integer $company_id.
      * @internal Used by the company producer.
      * @return string|int|null
      */
     public function getCompanyId() {
+        if ($this->_company_id !== null && $this->_isHierarchical()) {
+            return (string) $this->_company_id;
+        }
         return $this->_company_id;
     }
 
@@ -103,7 +110,7 @@ class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
         );
         if ($ignore_time === true) $payload['$ignore_time'] = true;
         // $company_id must be top-level, not inside the operation payload
-        if ($this->_company_id !== null) $payload['$company_id'] = $this->_company_id;
+        if ($this->_company_id !== null) $payload['$company_id'] = $this->getCompanyId();
         return $payload;
     }
 

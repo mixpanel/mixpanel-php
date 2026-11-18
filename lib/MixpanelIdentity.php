@@ -53,7 +53,8 @@ class MixpanelIdentity {
      * names the user, at which point that earlier activity follows the user.
      *
      * @param array $ids associative array with any of the keys distinct_id, user_id, company_id, device_id
-     * @throws InvalidArgumentException if a key is unknown, a value is empty or not a string or int, or no value is set
+     * @throws InvalidArgumentException if a key is unknown, a value is empty or not a string or int, user_id or
+     * company_id is only whitespace, or no value is set
      */
     public function __construct($ids = array()) {
         if (!is_array($ids)) {
@@ -73,6 +74,9 @@ class MixpanelIdentity {
             }
             if ($value === "") {
                 throw new InvalidArgumentException("$key must be non-empty");
+            }
+            if (($key === "user_id" || $key === "company_id") && self::isBlank($value)) {
+                throw new InvalidArgumentException("$key must not be only whitespace");
             }
             $field = "_" . $key;
             $this->$field = $value;
@@ -151,6 +155,18 @@ class MixpanelIdentity {
      */
     public static function propertyNames() {
         return array_values(self::$_properties);
+    }
+
+
+    /**
+     * Returns true for a non-empty string made only of whitespace, which Mixpanel would store as a junk id. Other
+     * ids, including ones with leading or trailing whitespace, are sent unchanged.
+     * @internal Used to validate user and company ids.
+     * @param mixed $value
+     * @return bool
+     */
+    public static function isBlank($value) {
+        return is_string($value) && $value !== "" && trim($value) === "";
     }
 
 

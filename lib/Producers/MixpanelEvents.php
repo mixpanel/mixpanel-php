@@ -28,11 +28,18 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
      * When an identity applies, either the $identity argument or one set with identify(MixpanelIdentity), its keys
      * (distinct_id, $user_id, $company_id, $device_id) are written after $properties and replace any values for the
      * same keys; other properties are kept. Identity keys from super properties are not used, so an identity with
-     * no distinct id sends no distinct_id.
+     * no distinct id sends no distinct_id. On a hierarchical groups project the identity's $user_id and $company_id
+     * are sent as strings.
+     *
+     * On a hierarchical groups project, a distinct_id of the form $company:{company}|$user:{user} (in $properties or
+     * set by identify()) must agree with any $company_id or $user_id property, since Mixpanel would otherwise keep
+     * the property and drop the other part of the id.
      * @param string $event
      * @param array $properties
      * @param MixpanelIdentity|null $identity [optional] who the event belongs to, for this event only
-     * @throws InvalidArgumentException if the identity does not fit this project
+     * @throws InvalidArgumentException if the identity does not fit this project, or on a hierarchical groups
+     * project if a combined distinct_id names a company or user that is only whitespace or that differs from the
+     * $company_id or $user_id property
      */
     public function track($event, $properties = array(), $identity = null) {
         // Without hierarchical groups, track($event, $properties) ignored any extra argument; keep that.
@@ -54,15 +61,60 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
         $params['event'] = $event;
         if ($identity === null) {
             $params['properties'] = array_merge($this->_super_properties, $properties);
+            if ($this->_isHierarchical()) {
+                self::_requireCombinedDistinctIdMatches($params['properties']);
+            }
         } else {
             $super_properties = $this->_super_properties;
             foreach (MixpanelIdentity::propertyNames() as $property) {
                 unset($super_properties[$property]);
             }
-            $params['properties'] = array_merge($super_properties, $properties, $identity->toProperties());
+            $identity_properties = $identity->toProperties();
+            if ($this->_isHierarchical()) {
+                // Mixpanel does not store an integer $user_id, so ids are sent as strings
+                foreach (array('$user_id', '$company_id') as $property) {
+                    if (isset($identity_properties[$property])) {
+                        $identity_properties[$property] = (string) $identity_properties[$property];
+                    }
+                }
+            }
+            $params['properties'] = array_merge($super_properties, $properties, $identity_properties);
         }
 
         $this->enqueue($params);
+    }
+
+
+    /**
+     * On a hierarchical groups project Mixpanel resolves an event from its $company_id and $user_id properties
+     * before its distinct_id, so a combined distinct_id that disagrees with them silently loses its user.
+     * @param array $properties the event's properties, including super properties
+     * @throws InvalidArgumentException if a combined distinct_id names a company or user that is only whitespace, or
+     * one that differs from the $company_id or $user_id property
+     */
+    private static function _requireCombinedDistinctIdMatches($properties) {
+        if (!isset($properties['distinct_id'])) {
+            return;
+        }
+        $distinct_id = $properties['distinct_id'];
+        $parts = self::_parseCombinedDistinctId($distinct_id);
+        if ($parts === null) {
+            return;
+        }
+        list($company_id, $user_id) = $parts;
+        $checks = array(array('$company_id', 'company', $company_id), array('$user_id', 'user', $user_id));
+        foreach ($checks as $check) {
+            list($property, $name, $expected) = $check;
+            if (!isset($properties[$property])) {
+                continue;
+            }
+            $value = $properties[$property];
+            $actual = is_scalar($value) ? (string) $value : json_encode($value);
+            if (!is_scalar($value) || $actual !== $expected) {
+                throw new InvalidArgumentException("distinct_id " . $distinct_id . " names " . $name . " "
+                    . $expected . ", but " . $property . " is " . $actual . ". Nothing sent");
+            }
+        }
     }
 
 

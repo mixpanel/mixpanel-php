@@ -711,12 +711,12 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
 
         $this->_hg->forCompany("42")->people->set(
             self::identity(array("user_id" => "user_123", "company_id" => 42)), array("plan" => "pro"));
-        $this->assertSame(42, self::lastMessage($this->_hg->group)['$company_id']);
+        $this->assertSame("42", self::lastMessage($this->_hg->group)['$company_id']);
 
         $this->_hg->forCompany(42)->people->set(self::identity(array("user_id" => 7)), array("plan" => "pro"));
         $msg = self::lastMessage($this->_hg->group);
-        $this->assertSame(42, $msg['$company_id']);
-        $this->assertSame(7, $msg['$group_id']);
+        $this->assertSame("42", $msg['$company_id']);
+        $this->assertSame("7", $msg['$group_id']);
 
         $people = $this->_hg->forCompany(42)->people;
         $this->assertThrows("InvalidArgumentException", function () use ($people) {
@@ -1120,7 +1120,7 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         $this->_hg->forCompany(7)->group->set('$company_id', "7", array("plan" => "pro"));
         $msg = self::lastMessage($this->_hg->group);
         $this->assertSame("7", $msg['$group_id']);
-        $this->assertSame(7, $msg['$company_id']);
+        $this->assertSame("7", $msg['$company_id']);
 
         $this->_hg->forCompany("7")->group->set('$company_id', 7, array("plan" => "pro"));
         $msg = self::lastMessage($this->_hg->group);
@@ -1221,6 +1221,188 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         $this->assertThrows("LogicException", function () use ($mp) {
             $mp->company->set(array("tier" => "enterprise"));
         });
+    }
+
+    // #endregion
+
+    // #region Service testing fixes
+
+    public function testIntegerIdsAreSentAsStringsForHierarchicalGroups() {
+        // Mixpanel stored an integer $user_id as no $user_id at all
+        $ints = self::identity(array("user_id" => 3190316, "company_id" => 3190317));
+        $this->_hg_events->track("Signup", array("count" => 5), $ints);
+        $props = self::lastEventProperties($this->_hg_events);
+        $this->assertSame("3190316", $props['$user_id']);
+        $this->assertSame("3190317", $props['$company_id']);
+        $this->assertSame(5, $props['count']);
+
+        $this->_hg_events->identify($ints);
+        $this->_hg_events->track("Signup");
+        $props = self::lastEventProperties($this->_hg_events);
+        $this->assertSame("3190316", $props['$user_id']);
+        $this->assertSame("3190317", $props['$company_id']);
+
+        $this->_hg->people->set($ints, array("plan" => "pro"));
+        $msg = self::lastMessage($this->_hg->group);
+        $this->assertSame("3190316", $msg['$group_id']);
+        $this->assertSame("3190317", $msg['$company_id']);
+
+        $acme = $this->_hg->forCompany(42);
+        $acme->group->set("department", "finance", array("plan" => "pro"));
+        $this->assertSame("42", self::lastMessage($this->_hg->group)['$company_id']);
+        $acme->company->set(array("tier" => "enterprise"));
+        $msg = self::lastMessage($this->_hg->group);
+        $this->assertSame("42", $msg['$group_id']);
+        $this->assertSame("42", $msg['$company_id']);
+    }
+
+    public function testStringIdsAreSentUnchangedForHierarchicalGroups() {
+        $this->_hg_events->track("Signup", array("count" => 5), self::hgUser());
+        $props = self::lastEventProperties($this->_hg_events);
+        $this->assertSame("user_123", $props['$user_id']);
+        $this->assertSame("acme", $props['$company_id']);
+        $this->assertSame(5, $props['count']);
+
+        $this->_hg->forCompany("acme")->people->set(self::hgUser(), array("plan" => "pro"));
+        $msg = self::lastMessage($this->_hg->group);
+        $this->assertSame("user_123", $msg['$group_id']);
+        $this->assertSame("acme", $msg['$company_id']);
+    }
+
+    public function testIntegerIdsAreUnchangedForLegacy() {
+        $this->_legacy_events->track("Signup", array(), self::identity(array("user_id" => 7, "device_id" => 8)));
+        $props = self::lastEventProperties($this->_legacy_events);
+        $this->assertSame(7, $props['$user_id']);
+        $this->assertSame(8, $props['$device_id']);
+
+        $acme = $this->_legacy->forCompany(42);
+        $acme->group->set("department", "finance", array("plan" => "pro"));
+        $this->assertSame(42, self::lastMessage($this->_legacy->group)['$company_id']);
+        $acme->company->set(array("tier" => "enterprise"));
+        $msg = self::lastMessage($this->_legacy->group);
+        $this->assertSame(42, $msg['$group_id']);
+        $this->assertSame(42, $msg['$company_id']);
+    }
+
+    public function testCombinedDistinctIdConflictingWithPropertiesIsRejected() {
+        // Mixpanel stored $company:c6|$user:u6 with $company_id zz6 as $company:zz6, dropping the user
+        $events = $this->_hg_events;
+        $combined = '$company:c6|$user:u6';
+
+        $e = $this->assertThrows("InvalidArgumentException", function () use ($events, $combined) {
+            $events->track("Signup", array("distinct_id" => $combined, '$company_id' => "zz6"));
+        });
+        $this->assertEquals('distinct_id $company:c6|$user:u6 names company c6, but $company_id is zz6. '
+            . 'Nothing sent', $e->getMessage());
+
+        $e = $this->assertThrows("InvalidArgumentException", function () use ($events, $combined) {
+            $events->track("Signup", array("distinct_id" => $combined, '$user_id' => "u7"));
+        });
+        $this->assertEquals('distinct_id $company:c6|$user:u6 names user u6, but $user_id is u7. Nothing sent',
+            $e->getMessage());
+
+        // from super properties
+        $events->identify($combined);
+        $events->register('$company_id', "zz6");
+        $this->assertThrows("InvalidArgumentException", function () use ($events) {
+            $events->track("Signup");
+        });
+        $events->unregister('$company_id');
+        $this->assertThrows("InvalidArgumentException", function () use ($events) {
+            $events->track("Signup", array('$user_id' => 6));
+        });
+        $this->assertThrows("InvalidArgumentException", function () use ($events, $combined) {
+            $events->track("Signup", array("distinct_id" => $combined, '$company_id' => array("x" => 1)));
+        });
+
+        $this->assertCount(0, $events->getQueue());
+    }
+
+    public function testCombinedDistinctIdMatchingPropertiesIsSentUnchanged() {
+        $events = $this->_hg_events;
+        $events->track("Signup", array("distinct_id" => '$company:c6|$user:u6', '$company_id' => "c6",
+            '$user_id' => "u6"));
+        $events->track("Signup", array("distinct_id" => '$company:6|$user:7', '$company_id' => 6, '$user_id' => 7));
+        $events->track("Signup", array("distinct_id" => '$company:c6|$user:u6'));
+        // a plain distinct id is not combined, so it is sent as given
+        $events->track("Signup", array("distinct_id" => "user_123", '$company_id' => "zz6"));
+        // an identity already decides its keys
+        $events->track("Signup", array('$company_id' => "zz6"),
+            self::identity(array("distinct_id" => '$company:c6|$user:u6')));
+
+        $queue = $events->getQueue();
+        $this->assertCount(5, $queue);
+        $this->assertSame(6, $queue[1]['properties']['$company_id']);
+        $this->assertSame(7, $queue[1]['properties']['$user_id']);
+        $this->assertEquals("zz6", $queue[3]['properties']['$company_id']);
+        $this->assertEquals('$company:c6|$user:u6', $queue[4]['properties']['distinct_id']);
+        $this->assertEquals("zz6", $queue[4]['properties']['$company_id']);
+    }
+
+    public function testCombinedDistinctIdConflictIsUnchangedForLegacy() {
+        $this->_legacy_events->track("Signup", array("distinct_id" => '$company:c6|$user:u6', '$company_id' => "zz6",
+            '$user_id' => "u7"));
+        $this->_legacy_events->track("Signup", array("distinct_id" => '$company: |$user:  '));
+        $this->assertCount(2, $this->_legacy_events->getQueue());
+        $props = self::lastEventProperties($this->_legacy_events);
+        $this->assertEquals('$company: |$user:  ', $props['distinct_id']);
+    }
+
+    public function testIdentityRejectsWhitespaceOnlyUserAndCompany() {
+        foreach (array("user_id", "company_id") as $key) {
+            foreach (array(" ", "  ", "\t\n") as $blank) {
+                $e = $this->assertThrows("InvalidArgumentException", function () use ($key, $blank) {
+                    new MixpanelIdentity(array($key => $blank));
+                });
+                $this->assertMessageContains("$key must not be only whitespace", $e);
+            }
+        }
+        // other ids are not trimmed or otherwise changed
+        $identity = self::identity(array("user_id" => " user_123 ", "company_id" => "acme "));
+        $this->assertSame(" user_123 ", $identity->getUserId());
+        $this->assertSame("acme ", $identity->getCompanyId());
+    }
+
+    public function testForCompanyRejectsWhitespaceOnly() {
+        foreach (array($this->_hg, $this->_legacy) as $mp) {
+            foreach (array(" ", "  ") as $blank) {
+                $this->assertThrows("InvalidArgumentException", function () use ($mp, $blank) {
+                    $mp->forCompany($blank);
+                });
+                $this->assertThrows("InvalidArgumentException", function () use ($mp, $blank) {
+                    $mp->group->forCompany($blank);
+                });
+            }
+            $mp->forCompany(" acme ")->company->set(array("tier" => "enterprise"));
+            $this->assertSame(" acme ", self::lastMessage($mp->group)['$company_id']);
+        }
+    }
+
+    public function testCombinedDistinctIdWithWhitespaceOnlyPartsIsRejected() {
+        // Mixpanel stored these as the junk users "$company: |$user:" and "$company: |$user:  "
+        $events = $this->_hg_events;
+        $people = $this->_hg->people;
+        foreach (array('$company: |$user:  ', '$company: |$user:u6', '$company:c6|$user: ') as $blank) {
+            $e = $this->assertThrows("InvalidArgumentException", function () use ($events, $blank) {
+                $events->track("Signup", array("distinct_id" => $blank));
+            });
+            $this->assertMessageContains("only whitespace", $e);
+            $this->assertThrows("InvalidArgumentException", function () use ($people, $blank) {
+                $people->set($blank, array("plan" => "pro"));
+            });
+            $this->assertThrows("InvalidArgumentException", function () use ($people, $blank) {
+                $people->set(new MixpanelIdentity(array("distinct_id" => $blank)), array("plan" => "pro"));
+            });
+        }
+        $this->assertCount(0, $events->getQueue());
+        $this->assertCount(0, $this->_hg->group->getQueue());
+
+        // ids with surrounding spaces are not blank
+        $events->track("Signup", array("distinct_id" => '$company: c6 |$user: u6'));
+        $people->set('$company: c6 |$user: u6', array("plan" => "pro"));
+        $msg = self::lastMessage($this->_hg->group);
+        $this->assertSame(" u6", $msg['$group_id']);
+        $this->assertSame(" c6 ", $msg['$company_id']);
     }
 
     // #endregion
