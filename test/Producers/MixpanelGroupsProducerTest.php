@@ -97,9 +97,9 @@ class MixpanelGroupsProducerTest extends \PHPUnit\Framework\TestCase {
         $this->assertEquals("Mixpanel", $msg['$group_id']);
         $this->assertEquals("token", $msg['$token']);
         $this->assertArrayNotHasKey('$ignore_time', $msg);
-        $this->assertArrayHasKey('$unset', $msg);
-        $this->assertArrayHasKey("industry", $msg['$unset']);
-        $this->assertEquals("tech", $msg['$unset']['industry']);
+        $this->assertArrayHasKey('$remove', $msg);
+        $this->assertArrayHasKey("industry", $msg['$remove']);
+        $this->assertEquals("tech", $msg['$remove']['industry']);
     }
 
 

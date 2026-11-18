@@ -141,12 +141,11 @@ class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
     }
 
     /**
-     * Unset properties on a group profile. If the group does not exist, it creates it with no properties.
-     * If it does exist, it unsets these properties. NOTE: In other libraries we use 'unset' which is
-     * a reserved word in PHP.
+     * Remove values from list properties on a group profile. If the group does not exist, it creates it
+     * with no properties. If it does exist, it removes each given value from the list property it is keyed by.
      * @param string|int $group_key the group_key used for groups in Project Settings
      * @param string|int $group_id the group id used for the group profile
-     * @param array $props associative array of properties to unset on the group profile
+     * @param array $props associative array of list property names to the value to remove from each
      * @param boolean $ignore_time If the $ignore_time property is true, Mixpanel will not automatically update the "Last Seen" property of the group profile. Otherwise, Mixpanel will add a "Last Seen" property associated with the current time
      */
     public function remove($group_key, $group_id, $props, $ignore_time = false) {
