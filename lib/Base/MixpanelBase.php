@@ -40,6 +40,11 @@ class Base_MixpanelBase {
      */
     public function __construct($options = array()) {
         $options = array_merge($this->_defaults, $options);
+        // A value such as 1 or "true" would otherwise quietly leave hierarchical groups off
+        if (isset($options["hierarchical_groups"]) && !is_bool($options["hierarchical_groups"])) {
+            throw new InvalidArgumentException("hierarchical_groups must be true or false, "
+                . gettype($options["hierarchical_groups"]) . " given");
+        }
         $this->_options = $options;
     }
 

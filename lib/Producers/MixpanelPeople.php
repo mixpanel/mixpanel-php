@@ -438,12 +438,13 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
     }
 
     /**
-     * Empties the queue without persisting any of the messages. On a hierarchical groups project this also empties
-     * the groups producer's queue, where user profile updates are queued.
+     * Empties the queue without persisting any of the messages. On a hierarchical groups project this also removes
+     * the user profile updates queued on the groups producer; company and other group profile updates queued there
+     * are kept.
      */
     public function reset() {
         if ($this->_isHierarchical()) {
-            $this->getGroupsProducer()->reset();
+            $this->getGroupsProducer()->resetUserProfileUpdates();
         }
         parent::reset();
     }

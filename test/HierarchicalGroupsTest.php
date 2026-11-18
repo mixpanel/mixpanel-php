@@ -349,15 +349,6 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         $this->assertArrayNotHasKey("hierarchical_groups", $curl->getOptions());
     }
 
-    public function testOnlyTrueEnablesHierarchicalGroups() {
-        foreach (array("true", 1, "1") as $value) {
-            $events = new Producers_MixpanelEvents("token", array("hierarchical_groups" => $value));
-            $events->track("Signup", array(), "user_123");
-            $this->assertCount(1, $events->getQueue());
-            $events->reset();
-        }
-    }
-
     public function testIdentifyWithIdentityAppliesToLaterEvents() {
         $this->_hg_events->identify(self::hgUser());
         $this->_hg_events->track("Signup", array("plan" => "pro", '$user_id' => "wrong"));
@@ -869,6 +860,35 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         $this->assertCount(0, $this->_hg->people->getQueue());
     }
 
+    public function testPeopleResetKeepsCompanyAndGroupUpdatesForHierarchicalGroups() {
+        $acme = $this->_hg->forCompany("acme");
+        $acme->company->set(array("tier" => "enterprise"));
+        $this->_hg->people->set(self::hgUser(), array("role" => "admin"));
+        $acme->group->set("team", "growth", array("size" => 5));
+        $this->_hg->people->deleteUser(self::hgUser());
+
+        $this->_hg->people->reset();
+
+        $queue = $this->_hg->group->getQueue();
+        $this->assertCount(2, $queue);
+        $this->assertEquals('$company_id', $queue[0]['$group_key']);
+        $this->assertEquals(array("tier" => "enterprise"), $queue[0]['$set']);
+        $this->assertEquals("team", $queue[1]['$group_key']);
+        $this->assertEquals("growth", $queue[1]['$group_id']);
+    }
+
+    public function testPeopleResetThroughForCompanyViewKeepsCompanyUpdatesForHierarchicalGroups() {
+        $acme = $this->_hg->forCompany("acme");
+        $acme->company->set(array("tier" => "enterprise"));
+        $acme->people->set(self::identity(array("user_id" => "user_123")), array("role" => "admin"));
+
+        $acme->people->reset();
+
+        $queue = $this->_hg->group->getQueue();
+        $this->assertCount(1, $queue);
+        $this->assertEquals('$company_id', $queue[0]['$group_key']);
+    }
+
     public function testPeopleFlushSendsUserProfileUpdatesToGroupsOnceForHierarchicalGroups() {
         $mp = new Mixpanel("token", array(
             "hierarchical_groups" => true,
@@ -1149,7 +1169,60 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         }
     }
 
+    public function testIdentifyWithAnonIdIsRefusedForHierarchicalGroups() {
+        $events = $this->_hg_events;
+        $anon = '$device:' . "0f8fad5b-d9cb-469f-a165-70867728950e";
+        try {
+            $events->identify("user_456", $anon);
+            $this->fail("expected BadMethodCallException");
+        } catch (BadMethodCallException $e) {
+            $this->assertContains("merges users", $e->getMessage());
+        }
+        $this->assertCount(0, $events->getQueue());
+        // nothing changed: a later event does not carry the refused user
+        $events->track("Signup");
+        $props = self::lastEventProperties($events);
+        $this->assertFalse(isset($props['distinct_id']) && $props['distinct_id'] === "user_456");
+    }
+
+    public function testIdentifyWithoutAnonIdIsUnchangedForHierarchicalGroups() {
+        $this->_hg_events->identify("user_456");
+        $this->_hg_events->track("Signup");
+
+        $this->assertCount(1, $this->_hg_events->getQueue());
+        $this->assertEquals("user_456", self::lastEventProperties($this->_hg_events)['distinct_id']);
+    }
+
+    public function testIdentifyWithAnonIdIsUnchangedForLegacy() {
+        $anon = '$device:' . "0f8fad5b-d9cb-469f-a165-70867728950e";
+        $this->_legacy_events->identify("user_456", $anon);
+
+        $msg = self::lastMessage($this->_legacy_events);
+        $this->assertEquals('$identify', $msg['event']);
+        $this->assertEquals("user_456", $msg['properties']['$identified_id']);
+        $this->assertEquals($anon, $msg['properties']['$anon_id']);
+    }
+
+    public function testNonBooleanHierarchicalGroupsOptionIsRefused() {
+        foreach (array(1, "true", "1", 0, null) as $value) {
+            if ($value === null) {
+                // null is the same as not set
+                new Mixpanel("token", array("hierarchical_groups" => $value));
+                continue;
+            }
+            try {
+                new Mixpanel("token", array("hierarchical_groups" => $value));
+                $this->fail("expected InvalidArgumentException for " . var_export($value, true));
+            } catch (InvalidArgumentException $e) {
+                $this->assertContains("hierarchical_groups must be true or false", $e->getMessage());
+            }
+        }
+        new Mixpanel("token", array("hierarchical_groups" => false));
+        new Producers_MixpanelEvents("token", array("hierarchical_groups" => true));
+    }
+
     // #endregion
+    // #region Company profile    // #endregion
     // #region Company profile
 
     /**

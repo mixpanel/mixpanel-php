@@ -148,6 +148,21 @@ abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
 
 
     /**
+     * Removes the queued messages for which $drop returns true, keeping the order of the rest
+     * @param callable $drop
+     */
+    protected function _removeQueued($drop) {
+        $kept = array();
+        foreach ($this->_queue as $message) {
+            if (!call_user_func($drop, $message)) {
+                $kept[] = $message;
+            }
+        }
+        $this->_queue = $kept;
+    }
+
+
+    /**
      * Returns the in-memory queue
      * @return array
      */

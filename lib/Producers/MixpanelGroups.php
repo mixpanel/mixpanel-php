@@ -219,6 +219,22 @@ class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
 
 
     /**
+     * Removes the queued user profile updates (group key $user_id) without persisting them, and keeps every other
+     * group profile update
+     * @internal Used by the people producer's reset() on a hierarchical groups project.
+     */
+    public function resetUserProfileUpdates() {
+        if ($this->_root !== null) {
+            $this->_root->resetUserProfileUpdates();
+            return;
+        }
+        $this->_removeQueued(function ($message) {
+            return isset($message['$group_key']) && $message['$group_key'] === '$user_id';
+        });
+    }
+
+
+    /**
      * Returns the in-memory queue (the bound producer's queue for a forCompany() view)
      * @return array
      */

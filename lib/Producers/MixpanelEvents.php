@@ -209,6 +209,8 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
      * @param string|int|MixpanelIdentity $user_id
      * @param string|int $anon_id [optional]
      * @throws InvalidArgumentException if the identity does not fit this project, or is passed with an $anon_id
+     * @throws BadMethodCallException on a hierarchical groups project, for a user id with an $anon_id: merging users
+     *     is not supported there
      */
     public function identify($user_id, $anon_id = null) {
         if ($user_id instanceof MixpanelIdentity) {
@@ -221,6 +223,11 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
             $this->unregisterAll(MixpanelIdentity::propertyNames());
             $this->_identity = $user_id;
             return;
+        }
+        if ($this->_isHierarchical() && !empty($anon_id)) {
+            throw new BadMethodCallException("identify with an anon_id merges users, which hierarchical groups "
+                . "projects do not support: they identify a user by company and user id. Identify with a "
+                . "MixpanelIdentity with a user_id and company_id instead. Nothing sent");
         }
         $this->_identity = null;
         $this->register("distinct_id", $user_id);
