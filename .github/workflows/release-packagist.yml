@@ -24,13 +24,17 @@ jobs:
     timeout-minutes: 30
 
     # Notes on the "publish" step:
-    #   Packagist auto-syncs from a GitHub webhook on tag push. This workflow
-    #   validates the tag, runs the test suite, and creates a draft GitHub
-    #   release. There is NO upload action - the tag push itself (which
-    #   triggered this workflow) is what completes publication once the
-    #   webhook fires. The `release` environment provides the human gate via
-    #   its required-reviewer setting (matching the pattern used by the npm
-    #   and Maven Central ports).
+    #   Packagist has no upload: it reads versions straight from git tags.
+    #   There is intentionally NO GitHub -> Packagist webhook on this repo.
+    #   Instead, after a `release` environment reviewer approves and the
+    #   tests pass, the "Notify Packagist" step calls Packagist's
+    #   update-package API (as the shared `mixpanel` Packagist account), so
+    #   the new version appears within seconds of approval.
+    #
+    #   This is not a hard gate: Packagist also crawls un-hooked packages
+    #   about once a week, so a pushed tag will eventually be indexed even
+    #   if this job is never approved. The real gate on what becomes a
+    #   release is who can push `[0-9]*` tags (the repo's tag ruleset).
 
     steps:
       - name: Checkout tagged commit
@@ -156,6 +160,27 @@ jobs:
               --notes-file release_notes.md
           fi
 
+      - name: Notify Packagist
+        env:
+          PACKAGIST_USERNAME: mixpanel
+          PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_HOOK_TOKEN }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          if [ -z "$PACKAGIST_TOKEN" ]; then
+            echo "::error::PACKAGIST_HOOK_TOKEN is not set on the 'release' environment"
+            exit 1
+          fi
+          # Docs: https://packagist.org/about ("Manual hook setup")
+          HTTP_CODE=$(curl -sS -o packagist_response.json -w '%{http_code}' -X POST \
+            -H 'Content-Type: application/json' \
+            --data "$(jq -cn --arg url "$REPO_URL" '{repository: {url: $url}}')" \
+            "https://packagist.org/api/update-package?username=${PACKAGIST_USERNAME}&apiToken=${PACKAGIST_TOKEN}")
+          echo "Packagist responded HTTP $HTTP_CODE: $(cat packagist_response.json)"
+          if [ "${HTTP_CODE:0:1}" != "2" ]; then
+            echo "::error::Packagist update failed (HTTP $HTTP_CODE). Click \"Update\" on the package page, or the weekly crawl will pick the tag up."
+            exit 1
+          fi
+
       - name: Summary
         env:
           MODULE: ${{ steps.module.outputs.module }}
@@ -171,10 +196,8 @@ jobs:
             echo "- [Draft GitHub Release](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG})"
             echo ""
             echo "### Packagist sync"
-            echo "Packagist auto-syncs from the configured GitHub webhook on tag push."
-            echo "If the new version does not appear within a few minutes, check:"
-            echo "1. The Packagist webhook on this repo's GitHub Settings -> Webhooks page (it should target https://packagist.org/api/github)"
-            echo "2. The package page on Packagist - a manual \"Update\" button is available there"
+            echo "This job notified Packagist via its update-package API (account \`mixpanel\`, secret \`PACKAGIST_HOOK_TOKEN\` on the \`release\` environment)."
+            echo "If the new version does not appear within a few minutes, use the \"Update\" button on the package page."
             echo ""
             echo "### Next step"
             echo "Review the draft GitHub release and click **Publish release** to make it live."
