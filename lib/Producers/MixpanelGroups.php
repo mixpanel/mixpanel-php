@@ -79,12 +79,20 @@ class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
      * @param boolean $ignore_time If the $ignore_time property is true, Mixpanel will not automatically update the "Last Seen" property of the group Profile. Otherwise, Mixpanel will add a "Last Seen" property associated with the current time
      * @return array
      * @throws LogicException for hierarchical groups projects when no company is bound
+     * @throws InvalidArgumentException for hierarchical groups projects when $group_key is '$company_id' and
+     * $group_id is not the bound company (the top-level $company_id would win, updating the bound company's profile)
      */
     private function _constructPayload($group_key, $group_id, $operation, $value, $ignore_time = false) {
         if ($this->_isHierarchical() && $this->_company_id === null) {
             throw new LogicException("Group profile updates for hierarchical groups projects require a company. "
                 . "Use forCompany(\$company_id) to send them, e.g. \$mp->forCompany(\$company_id)->group->set(...). "
                 . "Nothing to send for group $group_key=$group_id");
+        }
+        if ($this->_isHierarchical() && $group_key === '$company_id'
+            && (string) $group_id !== (string) $this->_company_id) {
+            throw new InvalidArgumentException("Group \$company_id=$group_id does not match company "
+                . "{$this->_company_id}. A company profile is updated through forCompany($group_id)->company. "
+                . "Nothing sent");
         }
         $payload = array(
             '$token' => $this->_token,

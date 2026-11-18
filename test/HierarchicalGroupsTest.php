@@ -1075,6 +1075,80 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         $this->assertCount(0, $view->getQueue());
     }
 
+    /**
+     * Every group call with group key '$company_id' and group id "globex", each taking a group producer
+     */
+    private static function globexCompanyGroupCalls() {
+        return array(
+            function ($group) { $group->set('$company_id', "globex", array("plan" => "pro")); },
+            function ($group) { $group->setOnce('$company_id', "globex", array("plan" => "pro")); },
+            function ($group) { $group->remove('$company_id', "globex", array("products" => "legacy")); },
+            function ($group) { $group->union('$company_id', "globex", "products", array("analytics")); },
+            function ($group) { $group->deleteGroup('$company_id', "globex"); },
+        );
+    }
+
+    public function testCompanyGroupForAnotherCompanyIsRejected() {
+        // the service applies the top-level $company_id, so this would update acme's profile
+        foreach (array($this->_hg->forCompany("acme")->group, $this->_hg->group->forCompany("acme")) as $acme) {
+            foreach (self::globexCompanyGroupCalls() as $call) {
+                $e = $this->assertThrows("InvalidArgumentException", function () use ($call, $acme) {
+                    call_user_func($call, $acme);
+                });
+                $this->assertMessageContains('Group $company_id=globex does not match company acme', $e);
+                $this->assertMessageContains("forCompany(globex)->company", $e);
+            }
+        }
+        $this->assertCount(0, $this->_hg->group->getQueue());
+    }
+
+    public function testCompanyGroupForTheBoundCompanyIsSentUnchanged() {
+        $this->_hg->forCompany("acme")->group->set('$company_id', "acme", array("plan" => "pro"));
+        $msg = self::lastMessage($this->_hg->group);
+        unset($msg['$time']);
+
+        $this->assertSame(array(
+            '$token' => "token",
+            '$group_key' => '$company_id',
+            '$group_id' => "acme",
+            '$set' => array("plan" => "pro"),
+            '$company_id' => "acme",
+        ), $msg);
+    }
+
+    public function testCompanyGroupComparesIdsAsStrings() {
+        $this->_hg->forCompany(7)->group->set('$company_id', "7", array("plan" => "pro"));
+        $msg = self::lastMessage($this->_hg->group);
+        $this->assertSame("7", $msg['$group_id']);
+        $this->assertSame(7, $msg['$company_id']);
+
+        $this->_hg->forCompany("7")->group->set('$company_id', 7, array("plan" => "pro"));
+        $msg = self::lastMessage($this->_hg->group);
+        $this->assertSame(7, $msg['$group_id']);
+        $this->assertSame("7", $msg['$company_id']);
+
+        $acme = $this->_hg->forCompany(7)->group;
+        $this->assertThrows("InvalidArgumentException", function () use ($acme) {
+            $acme->set('$company_id', 8, array("plan" => "pro"));
+        });
+        $this->assertCount(2, $this->_hg->group->getQueue());
+    }
+
+    public function testCompanyGroupForAnotherCompanyIsUnchangedForLegacy() {
+        $acme = $this->_legacy->forCompany("acme")->group;
+        foreach (self::globexCompanyGroupCalls() as $call) {
+            call_user_func($call, $acme);
+        }
+
+        $queue = $this->_legacy->group->getQueue();
+        $this->assertCount(5, $queue);
+        foreach ($queue as $msg) {
+            $this->assertEquals('$company_id', $msg['$group_key']);
+            $this->assertEquals("globex", $msg['$group_id']);
+            $this->assertEquals("acme", $msg['$company_id']);
+        }
+    }
+
     // #endregion
     // #region Company profile
 
