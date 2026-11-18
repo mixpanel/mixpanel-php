@@ -1532,5 +1532,65 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         }
     }
 
+    public function testIdentityWithCombinedDistinctIdWithEmptyOrBlankPartsIsRejected() {
+        $events = $this->_hg_events;
+        $blanks = array('$company:|$user:u', '$company:c|$user:', '$company:|$user:', '$company: |$user:',
+            '$company:c|$user:  ');
+        $valid = self::identity(array("distinct_id" => '$company:c|$user:u'));
+        foreach ($blanks as $blank) {
+            $identity = self::identity(array("distinct_id" => $blank));
+            $e = $this->assertThrows("InvalidArgumentException", function () use ($events, $identity) {
+                $events->track("Signup", array(), $identity);
+            });
+            $this->assertMessageContains("distinct_id " . $blank . " names a company or user that is empty or only "
+                . "whitespace. Nothing sent", $e);
+
+            // identify refuses it and keeps the identity set earlier
+            $events->identify($valid);
+            $e = $this->assertThrows("InvalidArgumentException", function () use ($events, $identity) {
+                $events->identify($identity);
+            });
+            $this->assertMessageContains("distinct_id " . $blank . " names a company or user that is empty or only "
+                . "whitespace. Nothing sent", $e);
+            $this->assertSame($valid, $events->getIdentity());
+            $events->identify("plain");
+
+            // the same through the Mixpanel facade
+            $hg = $this->_hg;
+            $this->assertThrows("InvalidArgumentException", function () use ($hg, $identity) {
+                $hg->track("Signup", array(), $identity);
+            });
+            $this->assertThrows("InvalidArgumentException", function () use ($hg, $identity) {
+                $hg->identify($identity);
+            });
+            $this->assertNull($hg->getIdentity());
+        }
+        $this->assertCount(0, $events->getQueue());
+
+        // a valid combined id is still sent, per call and after identify
+        $events->track("Signup", array(), $valid);
+        $this->assertSame('$company:c|$user:u', self::lastEventProperties($events)['distinct_id']);
+        $events->identify($valid);
+        $events->track("Signup");
+        $this->assertSame('$company:c|$user:u', self::lastEventProperties($events)['distinct_id']);
+
+        // ids that are not combined are sent as given
+        foreach (array('user_123', '$device:abc', '$company:acme', '$company:|$usr:u') as $id) {
+            $events->track("Signup", array(), self::identity(array("distinct_id" => $id)));
+            $this->assertSame($id, self::lastEventProperties($events)['distinct_id']);
+        }
+
+        // without hierarchical groups nothing changes
+        $legacy = $this->_legacy_events;
+        foreach ($blanks as $blank) {
+            $identity = self::identity(array("distinct_id" => $blank));
+            $legacy->track("Signup", array(), $identity);
+            $this->assertSame($blank, self::lastEventProperties($legacy)['distinct_id']);
+            $legacy->identify($identity);
+            $legacy->track("Signup");
+            $this->assertSame($blank, self::lastEventProperties($legacy)['distinct_id']);
+        }
+    }
+
     // #endregion
 }

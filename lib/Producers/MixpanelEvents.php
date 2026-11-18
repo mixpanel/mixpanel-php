@@ -48,6 +48,7 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
         }
         if ($identity !== null) {
             $this->_requireIdentityMatchesProject($identity);
+            $this->_requireIdentityDistinctIdHasNoBlankPart($identity);
         } else {
             $identity = $this->_identity;
         }
@@ -82,6 +83,19 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
         }
 
         $this->enqueue($params);
+    }
+
+
+    /**
+     * On a hierarchical groups project, refuses an identity whose distinct_id is combined
+     * ($company:{company}|$user:{user}) but names a company or user that is empty or only whitespace.
+     * @param MixpanelIdentity $identity
+     * @throws InvalidArgumentException if the combined distinct_id has an empty or whitespace-only part
+     */
+    private function _requireIdentityDistinctIdHasNoBlankPart($identity) {
+        if ($this->_isHierarchical()) {
+            self::_parseCombinedDistinctId($identity->getDistinctId());
+        }
     }
 
 
@@ -208,13 +222,16 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
      * in that case. Identifying with a user id afterwards clears the identity.
      * @param string|int|MixpanelIdentity $user_id
      * @param string|int $anon_id [optional]
-     * @throws InvalidArgumentException if the identity does not fit this project, or is passed with an $anon_id
+     * @throws InvalidArgumentException if the identity does not fit this project, is passed with an $anon_id, or
+     * on a hierarchical groups project has a combined distinct_id naming a company or user that is empty or only
+     * whitespace
      * @throws BadMethodCallException on a hierarchical groups project, for a user id with an $anon_id: merging users
      *     is not supported there
      */
     public function identify($user_id, $anon_id = null) {
         if ($user_id instanceof MixpanelIdentity) {
             $this->_requireIdentityMatchesProject($user_id);
+            $this->_requireIdentityDistinctIdHasNoBlankPart($user_id);
             if ($anon_id !== null) {
                 throw new InvalidArgumentException("identify(MixpanelIdentity) takes no anon_id; set device_id on "
                     . $user_id . " instead");
