@@ -1478,5 +1478,59 @@ class HierarchicalGroupsTest extends PHPUnit_Framework_TestCase {
         $this->assertSame(" c6 ", $msg['$company_id']);
     }
 
+    public function testCombinedDistinctIdWithEmptyOrBlankPartsIsRejected() {
+        $events = $this->_hg_events;
+        $hg = $this->_hg;
+        $blanks = array('$company:|$user:u', '$company:c|$user:', '$company:|$user:', '$company: |$user:',
+            '$company:c|$user:  ');
+        foreach ($blanks as $blank) {
+            $e = $this->assertThrows("InvalidArgumentException", function () use ($events, $blank) {
+                $events->track("Signup", array("distinct_id" => $blank));
+            });
+            $this->assertMessageContains("distinct_id " . $blank . " names a company or user that is empty or only "
+                . "whitespace. Nothing sent", $e);
+            $this->assertThrows("InvalidArgumentException", function () use ($events, $blank) {
+                $events->identify($blank);
+                $events->track("Signup");
+            });
+            $calls = array(
+                function () use ($hg, $blank) { $hg->people->set($blank, array("plan" => "pro")); },
+                function () use ($hg, $blank) {
+                    $hg->people->set(new MixpanelIdentity(array("distinct_id" => $blank)), array("plan" => "pro"));
+                },
+                function () use ($hg, $blank) { $hg->people->deleteUser($blank); },
+            );
+            foreach ($calls as $call) {
+                $e = $this->assertThrows("InvalidArgumentException", $call);
+                $this->assertMessageContains("names a company or user that is empty or only whitespace", $e);
+            }
+        }
+        $this->assertCount(0, $events->getQueue());
+        $this->assertCount(0, $hg->group->getQueue());
+        $events->unregister("distinct_id");
+
+        // a valid combined id is still sent
+        $events->track("Signup", array("distinct_id" => '$company:c|$user:u'));
+        $this->assertSame('$company:c|$user:u', self::lastEventProperties($events)['distinct_id']);
+        $hg->people->set('$company:c|$user:u', array("plan" => "pro"));
+        $msg = self::lastMessage($hg->group);
+        $this->assertSame("u", $msg['$group_id']);
+        $this->assertSame("c", $msg['$company_id']);
+
+        // ids that are not combined are sent as given
+        foreach (array('user_123', '$device:abc', '$company:acme', '$company:|$usr:u') as $id) {
+            $events->track("Signup", array("distinct_id" => $id));
+            $this->assertSame($id, self::lastEventProperties($events)['distinct_id']);
+        }
+
+        // without hierarchical groups nothing changes
+        foreach ($blanks as $blank) {
+            $this->_legacy_events->track("Signup", array("distinct_id" => $blank));
+            $this->assertSame($blank, self::lastEventProperties($this->_legacy_events)['distinct_id']);
+            $this->_legacy->people->set($blank, array("plan" => "pro"));
+            $this->assertSame($blank, self::lastMessage($this->_legacy->people)['$distinct_id']);
+        }
+    }
+
     // #endregion
 }

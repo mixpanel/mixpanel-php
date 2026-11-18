@@ -355,7 +355,7 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      * @param mixed $distinct_id
      * @return array array($company_id, $user_id)
      * @throws InvalidArgumentException unless $distinct_id has the form $company:{company}|$user:{user}, or if
-     * its company or user is only whitespace
+     * its company or user is empty or only whitespace
      */
     private function _requireCombinedDistinctId($distinct_id) {
         $parts = self::_parseCombinedDistinctId($distinct_id);

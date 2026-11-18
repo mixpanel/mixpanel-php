@@ -38,8 +38,8 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
      * @param array $properties
      * @param MixpanelIdentity|null $identity [optional] who the event belongs to, for this event only
      * @throws InvalidArgumentException if the identity does not fit this project, or on a hierarchical groups
-     * project if a combined distinct_id names a company or user that is only whitespace or that differs from the
-     * $company_id or $user_id property
+     * project if a combined distinct_id names a company or user that is empty or only whitespace, or one that
+     * differs from the $company_id or $user_id property
      */
     public function track($event, $properties = array(), $identity = null) {
         // Without hierarchical groups, track($event, $properties) ignored any extra argument; keep that.
@@ -89,8 +89,8 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
      * On a hierarchical groups project Mixpanel resolves an event from its $company_id and $user_id properties
      * before its distinct_id, so a combined distinct_id that disagrees with them silently loses its user.
      * @param array $properties the event's properties, including super properties
-     * @throws InvalidArgumentException if a combined distinct_id names a company or user that is only whitespace, or
-     * one that differs from the $company_id or $user_id property
+     * @throws InvalidArgumentException if a combined distinct_id names a company or user that is empty or only
+     * whitespace, or one that differs from the $company_id or $user_id property
      */
     private static function _requireCombinedDistinctIdMatches($properties) {
         if (!isset($properties['distinct_id'])) {
