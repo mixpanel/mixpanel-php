@@ -1394,6 +1394,79 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
         $this->assertCount(0, $events->getQueue());
     }
 
+    public function testIdentityWhoseDistinctIdNamesAnotherUserIsRejected() {
+        // Events resolved such an identity to user_id while profile updates targeted the distinct_id's user
+        $people = $this->_hg->people;
+        $events = $this->_hg_events;
+        $identity = new MixpanelIdentity(array(
+            "distinct_id" => '$company:acme|$user:old', "user_id" => "new", "company_id" => "acme"));
+        $message = 'distinct_id $company:acme|$user:old names user old, but user_id is new. Nothing sent';
+
+        $calls = array(
+            function () use ($people, $identity) { $people->set($identity, array("plan" => "pro")); },
+            function () use ($people, $identity) { $people->setOnce($identity, array("plan" => "pro")); },
+            function () use ($people, $identity) { $people->remove($identity, array("plan")); },
+            function () use ($people, $identity) { $people->deleteUser($identity); },
+            function () use ($events, $identity) { $events->track("Signup", array(), $identity); },
+            function () use ($events, $identity) { $events->identify($identity); },
+        );
+        foreach ($calls as $call) {
+            $e = $this->assertThrows("InvalidArgumentException", $call);
+            $this->assertEquals($message, $e->getMessage());
+        }
+        $this->assertCount(0, $this->_hg->group->getQueue());
+        $this->assertCount(0, $people->getQueue());
+        $this->assertCount(0, $events->getQueue());
+        $this->assertNull($events->getIdentity());
+
+        $otherCompany = new MixpanelIdentity(array("distinct_id" => '$company:acme|$user:old', "company_id" => "zz"));
+        $e = $this->assertThrows("InvalidArgumentException", function () use ($people, $otherCompany) {
+            $people->deleteUser($otherCompany);
+        });
+        $this->assertEquals('distinct_id $company:acme|$user:old names company acme, but company_id is zz. '
+            . 'Nothing sent', $e->getMessage());
+        $this->assertThrows("InvalidArgumentException", function () use ($events, $otherCompany) {
+            $events->track("Signup", array(), $otherCompany);
+        });
+        $this->assertCount(0, $this->_hg->group->getQueue());
+        $this->assertCount(0, $events->getQueue());
+    }
+
+    public function testIdentityWhoseDistinctIdAgreesWithItsIdsIsAccepted() {
+        $people = $this->_hg->people;
+        $events = $this->_hg_events;
+        $identity = new MixpanelIdentity(array(
+            "distinct_id" => '$company:42|$user:7', "user_id" => 7, "company_id" => 42));
+
+        $people->set($identity, array("plan" => "pro"));
+        $people->deleteUser($identity);
+        $queue = $this->_hg->group->getQueue();
+        $this->assertCount(2, $queue);
+        foreach ($queue as $msg) {
+            $this->assertSame("7", $msg['$group_id']);
+            $this->assertSame("42", $msg['$company_id']);
+        }
+
+        $events->track("Signup", array(), $identity);
+        $properties = self::lastEventProperties($events);
+        $this->assertSame('$company:42|$user:7', $properties['distinct_id']);
+        $this->assertSame("7", $properties['$user_id']);
+        $this->assertSame("42", $properties['$company_id']);
+    }
+
+    public function testIdentityWithDisagreeingDistinctIdIsUnchangedWithoutHierarchicalGroups() {
+        // Legacy identities carry only distinct_id/device_id, and legacy events never parse distinct ids
+        $identity = new MixpanelIdentity(array("distinct_id" => '$company:acme|$user:old', "device_id" => "d1"));
+        $this->_legacy_events->track("Signup", array('$user_id' => "new"), $identity);
+        $properties = self::lastEventProperties($this->_legacy_events);
+        $this->assertSame('$company:acme|$user:old', $properties['distinct_id']);
+        $this->assertSame("new", $properties['$user_id']);
+
+        $this->_legacy->people->set($identity, array("plan" => "pro"));
+        $msg = self::lastMessage($this->_legacy->people);
+        $this->assertSame('$company:acme|$user:old', $msg['$distinct_id']);
+    }
+
     public function testCombinedDistinctIdMatchingPropertiesIsSentUnchanged() {
         $events = $this->_hg_events;
         $events->track("Signup", array("distinct_id" => '$company:c6|$user:u6', '$company_id' => "c6",

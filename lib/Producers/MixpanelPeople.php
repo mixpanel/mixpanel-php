@@ -270,6 +270,7 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
         if ($distinct_id instanceof MixpanelIdentity) {
             $identity = $distinct_id;
             $this->_requireIdentityMatchesProject($identity);
+            $this->_requireIdentityDistinctIdAgrees($identity);
             $distinct_id = $identity->getDistinctId();
         } else {
             $identity = null;

@@ -39,7 +39,7 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
      * @param MixpanelIdentity|null $identity [optional] who the event belongs to, for this event only
      * @throws InvalidArgumentException if the identity does not fit this project, or on a hierarchical groups
      * project if a combined distinct_id names a company or user that is empty or only whitespace, or one that
-     * differs from the $company_id or $user_id property
+     * differs from the $company_id or $user_id property or from the identity's own company_id or user_id
      */
     public function track($event, $properties = array(), $identity = null) {
         // Without hierarchical groups, track($event, $properties) ignored any extra argument; keep that.
@@ -48,7 +48,7 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
         }
         if ($identity !== null) {
             $this->_requireIdentityMatchesProject($identity);
-            $this->_requireIdentityDistinctIdHasNoBlankPart($identity);
+            $this->_requireIdentityDistinctIdAgrees($identity);
         } else {
             $identity = $this->_identity;
         }
@@ -87,19 +87,6 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
 
 
     /**
-     * On a hierarchical groups project, refuses an identity whose distinct_id is combined
-     * ($company:{company}|$user:{user}) but names a company or user that is empty or only whitespace.
-     * @param MixpanelIdentity $identity
-     * @throws InvalidArgumentException if the combined distinct_id has an empty or whitespace-only part
-     */
-    private function _requireIdentityDistinctIdHasNoBlankPart($identity) {
-        if ($this->_isHierarchical()) {
-            self::_parseCombinedDistinctId($identity->getDistinctId());
-        }
-    }
-
-
-    /**
      * On a hierarchical groups project Mixpanel resolves an event from its $company_id and $user_id properties
      * before its distinct_id, so a combined distinct_id that disagrees with them silently loses its user.
      * @param array $properties the event's properties, including super properties
@@ -110,25 +97,9 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
         if (!isset($properties['distinct_id'])) {
             return;
         }
-        $distinct_id = $properties['distinct_id'];
-        $parts = self::_parseCombinedDistinctId($distinct_id);
-        if ($parts === null) {
-            return;
-        }
-        list($company_id, $user_id) = $parts;
-        $checks = array(array('$company_id', 'company', $company_id), array('$user_id', 'user', $user_id));
-        foreach ($checks as $check) {
-            list($property, $name, $expected) = $check;
-            if (!isset($properties[$property])) {
-                continue;
-            }
-            $value = $properties[$property];
-            $actual = is_scalar($value) ? (string) $value : json_encode($value);
-            if (!is_scalar($value) || $actual !== $expected) {
-                throw new InvalidArgumentException("distinct_id " . $distinct_id . " names " . $name . " "
-                    . $expected . ", but " . $property . " is " . $actual . ". Nothing sent");
-            }
-        }
+        self::_requireCombinedDistinctIdAgrees($properties['distinct_id'],
+            '$company_id', isset($properties['$company_id']) ? $properties['$company_id'] : null,
+            '$user_id', isset($properties['$user_id']) ? $properties['$user_id'] : null);
     }
 
 
@@ -224,14 +195,14 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
      * @param string|int $anon_id [optional]
      * @throws InvalidArgumentException if the identity does not fit this project, is passed with an $anon_id, or
      * on a hierarchical groups project has a combined distinct_id naming a company or user that is empty or only
-     * whitespace
+     * whitespace, or one that differs from the identity's own company_id or user_id
      * @throws BadMethodCallException on a hierarchical groups project, for a user id with an $anon_id: merging users
      *     is not supported there
      */
     public function identify($user_id, $anon_id = null) {
         if ($user_id instanceof MixpanelIdentity) {
             $this->_requireIdentityMatchesProject($user_id);
-            $this->_requireIdentityDistinctIdHasNoBlankPart($user_id);
+            $this->_requireIdentityDistinctIdAgrees($user_id);
             if ($anon_id !== null) {
                 throw new InvalidArgumentException("identify(MixpanelIdentity) takes no anon_id; set device_id on "
                     . $user_id . " instead");

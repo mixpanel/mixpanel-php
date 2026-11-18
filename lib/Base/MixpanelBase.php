@@ -128,4 +128,55 @@ class Base_MixpanelBase {
         return array($company_id, $user_id);
     }
 
+
+    /**
+     * Refuses a combined distinct id ($company:{company}|$user:{user}) whose company or user differs from the
+     * value given for it. Ids are compared as strings; a value that is null or absent is not compared.
+     * @param mixed $distinct_id
+     * @param string $company_name what the message calls the company value, e.g. '$company_id'
+     * @param mixed $company_value
+     * @param string $user_name what the message calls the user value, e.g. '$user_id'
+     * @param mixed $user_value
+     * @throws InvalidArgumentException if the distinct id names a company or user that is empty or only whitespace,
+     * or one that differs from the given value
+     */
+    protected static function _requireCombinedDistinctIdAgrees($distinct_id, $company_name, $company_value,
+                                                               $user_name, $user_value) {
+        $parts = self::_parseCombinedDistinctId($distinct_id);
+        if ($parts === null) {
+            return;
+        }
+        list($company_id, $user_id) = $parts;
+        $checks = array(array($company_name, 'company', $company_id, $company_value),
+            array($user_name, 'user', $user_id, $user_value));
+        foreach ($checks as $check) {
+            list($field, $name, $expected, $value) = $check;
+            if ($value === null) {
+                continue;
+            }
+            $actual = is_scalar($value) ? (string) $value : json_encode($value);
+            if (!is_scalar($value) || $actual !== $expected) {
+                throw new InvalidArgumentException("distinct_id " . $distinct_id . " names " . $name . " "
+                    . $expected . ", but " . $field . " is " . $actual . ". Nothing sent");
+            }
+        }
+    }
+
+
+    /**
+     * On a hierarchical groups project, refuses an identity whose distinct_id is combined
+     * ($company:{company}|$user:{user}) but names a company or user that is empty or only whitespace, or one that
+     * differs from the identity's own company_id or user_id. Events resolve such an identity by user_id and
+     * company_id while profile updates would follow the distinct_id, so neither is chosen.
+     * @param MixpanelIdentity $identity
+     * @throws InvalidArgumentException if the combined distinct_id has an empty or whitespace-only part, or
+     * disagrees with the identity's company_id or user_id
+     */
+    protected function _requireIdentityDistinctIdAgrees($identity) {
+        if ($this->_isHierarchical()) {
+            self::_requireCombinedDistinctIdAgrees($identity->getDistinctId(), 'company_id',
+                $identity->getCompanyId(), 'user_id', $identity->getUserId());
+        }
+    }
+
 }
