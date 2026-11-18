@@ -327,7 +327,10 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
 
         $this->_legacy->track("Signup", array("plan" => "pro"), "user_123");
         $property = new ReflectionProperty("Mixpanel", "_events");
-        $property->setAccessible(true);
+        // Needed before PHP 8.1, where reflection is otherwise limited to public members; deprecated in 8.5
+        if (PHP_VERSION_ID < 80100) {
+            $property->setAccessible(true);
+        }
         $props = self::lastEventProperties($property->getValue($this->_legacy));
         $this->assertEquals("pro", $props['plan']);
         $this->assertArrayNotHasKey('$user_id', $props);

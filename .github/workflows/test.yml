@@ -16,13 +16,13 @@ jobs:
       matrix:
         # Lowest PHP supported by phpunit/phpunit ^8.5.52, and the latest
         # stable PHP used by release-packagist.yml.
-        php: ['7.2', '8.4']
+        php: ['7.2', '8.5']
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@9e72090525849c5e82e596468b86eb55e9cc5401  # v2.32.0
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962  # 2.40.0
         with:
           php-version: ${{ matrix.php }}
           tools: composer:v2
