@@ -227,9 +227,7 @@ class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
             $this->_root->resetUserProfileUpdates();
             return;
         }
-        $this->_removeQueued(function ($message) {
-            return isset($message['$group_key']) && $message['$group_key'] === '$user_id';
-        });
+        $this->_removeQueuedWithGroupKey('$user_id');
     }
 
 
