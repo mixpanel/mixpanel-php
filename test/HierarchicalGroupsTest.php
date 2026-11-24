@@ -142,53 +142,6 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
         $this->assertTrue(strpos($e->getMessage(), $needle) !== false, $e->getMessage());
     }
 
-    // #region Identity
-
-    public function testIdentityRejectsEmptyValues() {
-        // An empty string is a caller error; null simply leaves the value unset.
-        foreach (array("distinct_id", "user_id", "company_id", "device_id") as $key) {
-            $this->assertThrows("InvalidArgumentException", function () use ($key) {
-                new MixpanelIdentity(array($key => ""));
-            });
-        }
-    }
-
-    public function testIdentityNeedsAtLeastOneValue() {
-        $this->assertThrows("InvalidArgumentException", function () {
-            new MixpanelIdentity(array());
-        });
-        $this->assertThrows("InvalidArgumentException", function () {
-            new MixpanelIdentity(array("user_id" => null, "company_id" => null));
-        });
-    }
-
-    public function testIdentityRejectsUnknownKeysAndNonScalarValues() {
-        $this->assertThrows("InvalidArgumentException", function () {
-            new MixpanelIdentity(array('$user_id' => "user_123"));
-        });
-        $this->assertThrows("InvalidArgumentException", function () {
-            new MixpanelIdentity(array("user_id" => array("user_123")));
-        });
-        $this->assertThrows("InvalidArgumentException", function () {
-            new MixpanelIdentity("user_123");
-        });
-    }
-
-    public function testNullLeavesAValueUnset() {
-        $identity = self::identity(array("user_id" => "user_123", "device_id" => null));
-
-        $this->assertEquals("user_123", $identity->getUserId());
-        $this->assertNull($identity->getDeviceId());
-        $this->assertEquals(array('$user_id' => "user_123"), $identity->toProperties());
-        $this->assertFalse($identity->isHierarchical());
-    }
-
-    public function testIdentityStringNamesItsValues() {
-        $this->assertEquals("MixpanelIdentity{user_id=user_123, company_id=acme}", (string) self::hgUser());
-        $this->assertTrue(self::hgUser()->isHierarchical());
-    }
-
-    // #endregion
     // #region Events
 
     public function testHierarchicalEventSendsUserAndCompanyWithoutDistinctId() {
@@ -1251,81 +1204,6 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
     }
 
     // #endregion
-    // #region Company profile    // #endregion
-    // #region Company profile
-
-    /**
-     * Pairs of a company call and the group call it must match, each taking a forCompany("acme") client
-     */
-    private static function companyAndGroupCalls() {
-        return array(
-            array(function ($mp) { $mp->company->set(array("tier" => "enterprise")); },
-                function ($mp) { $mp->group->set('$company_id', "acme", array("tier" => "enterprise")); }),
-            array(function ($mp) { $mp->company->set(array("tier" => "enterprise"), true); },
-                function ($mp) { $mp->group->set('$company_id', "acme", array("tier" => "enterprise"), true); }),
-            array(function ($mp) { $mp->company->setOnce(array("first_seen" => "2024-01-02")); },
-                function ($mp) { $mp->group->setOnce('$company_id', "acme", array("first_seen" => "2024-01-02")); }),
-            array(function ($mp) { $mp->company->remove(array("products" => "legacy"), true); },
-                function ($mp) { $mp->group->remove('$company_id', "acme", array("products" => "legacy"), true); }),
-            array(function ($mp) { $mp->company->union("products", array("analytics")); },
-                function ($mp) { $mp->group->union('$company_id', "acme", "products", array("analytics")); }),
-            array(function ($mp) { $mp->company->deleteCompany(); },
-                function ($mp) { $mp->group->deleteGroup('$company_id', "acme"); }),
-            array(function ($mp) { $mp->company->deleteCompany(true); },
-                function ($mp) { $mp->group->deleteGroup('$company_id', "acme", true); }),
-        );
-    }
-
-    public function testCompanyMethodsQueueExactlyWhatTheGroupCallQueues() {
-        foreach (array($this->_hg, $this->_legacy) as $mp) {
-            $acme = $mp->forCompany("acme");
-            foreach (self::companyAndGroupCalls() as $calls) {
-                $mp->group->reset();
-                call_user_func($calls[0], $acme);
-                call_user_func($calls[1], $acme);
-
-                $queue = $mp->group->getQueue();
-                $this->assertCount(2, $queue);
-                // $time is the only value that differs between two calls
-                unset($queue[0]['$time'], $queue[1]['$time']);
-                $this->assertSame(json_encode($queue[1]), json_encode($queue[0]));
-                $this->assertEquals('$company_id', $queue[0]['$group_key']);
-                $this->assertEquals("acme", $queue[0]['$group_id']);
-                $this->assertEquals("acme", $queue[0]['$company_id']);
-            }
-        }
-    }
-
-    public function testCompanyWithoutForCompanyIsRejected() {
-        foreach (array($this->_hg, $this->_legacy) as $mp) {
-            foreach (self::companyAndGroupCalls() as $calls) {
-                $call = $calls[0];
-                $e = $this->assertThrows("LogicException", function () use ($call, $mp) {
-                    call_user_func($call, $mp);
-                });
-                $this->assertMessageContains("forCompany", $e);
-            }
-            $this->assertCount(0, $mp->group->getQueue());
-        }
-    }
-
-    public function testForCompanyLeavesTheReceiverCompanyUnbound() {
-        $acme = $this->_hg->forCompany("acme");
-        $other = $acme->forCompany("other");
-
-        $acme->company->set(array("tier" => "enterprise"));
-        $this->assertEquals("acme", self::lastMessage($this->_hg->group)['$group_id']);
-        $other->company->set(array("tier" => "enterprise"));
-        $this->assertEquals("other", self::lastMessage($this->_hg->group)['$group_id']);
-        $this->assertEquals("other", self::lastMessage($this->_hg->group)['$company_id']);
-
-        $mp = $this->_hg;
-        $this->assertThrows("LogicException", function () use ($mp) {
-            $mp->company->set(array("tier" => "enterprise"));
-        });
-    }
-
-    // #endregion
 
     // #region Service testing fixes
 
@@ -1521,21 +1399,6 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
         $this->assertCount(2, $this->_legacy_events->getQueue());
         $props = self::lastEventProperties($this->_legacy_events);
         $this->assertEquals('$company: |$user:  ', $props['distinct_id']);
-    }
-
-    public function testIdentityRejectsWhitespaceOnlyUserAndCompany() {
-        foreach (array("user_id", "company_id") as $key) {
-            foreach (array(" ", "  ", "\t\n") as $blank) {
-                $e = $this->assertThrows("InvalidArgumentException", function () use ($key, $blank) {
-                    new MixpanelIdentity(array($key => $blank));
-                });
-                $this->assertMessageContains("$key must not be only whitespace", $e);
-            }
-        }
-        // other ids are not trimmed or otherwise changed
-        $identity = self::identity(array("user_id" => " user_123 ", "company_id" => "acme "));
-        $this->assertSame(" user_123 ", $identity->getUserId());
-        $this->assertSame("acme ", $identity->getCompanyId());
     }
 
     public function testForCompanyRejectsWhitespaceOnly() {

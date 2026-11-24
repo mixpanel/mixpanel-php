@@ -7,6 +7,13 @@ require_once(dirname(__FILE__) . "/MixpanelBaseProducer.php");
 class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
 
     /**
+     * The group key a hierarchical groups user profile is sent under
+     * @internal Used by the people producer.
+     */
+    const USER_GROUP_KEY = '$user_id';
+
+
+    /**
      * The company bound by forCompany(), added as a top-level $company_id on every message
      * @var string|int|null
      */
@@ -231,7 +238,7 @@ class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
             $this->_root->resetUserProfileUpdates();
             return;
         }
-        $this->_removeQueuedWithGroupKey('$user_id');
+        $this->_removeQueuedWithGroupKey(self::USER_GROUP_KEY);
     }
 
 

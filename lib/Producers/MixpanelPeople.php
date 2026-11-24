@@ -361,7 +361,7 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
         $this->_requireNoIgnoreAlias($ignore_alias);
         $payload = array(
             '$token' => $this->_token,
-            '$group_key' => '$user_id',
+            '$group_key' => Producers_MixpanelGroups::USER_GROUP_KEY,
             '$group_id' => (string) $user_id,
             '$time' => microtime(true),
             $operation => $value
