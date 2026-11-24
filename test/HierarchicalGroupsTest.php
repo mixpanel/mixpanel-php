@@ -1250,10 +1250,12 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
     }
 
     public function testIntegerIdsAreUnchangedForLegacy() {
-        $this->_legacy_events->track("Signup", array(), self::identity(array("user_id" => 7, "device_id" => 8)));
+        // an identity's ids are always sent as strings; only the bound company is sent as given on legacy
+        $this->_legacy_events->track("Signup", array(), self::identity(array("distinct_id" => 5, "user_id" => 7, "device_id" => 8)));
         $props = self::lastEventProperties($this->_legacy_events);
-        $this->assertSame(7, $props['$user_id']);
-        $this->assertSame(8, $props['$device_id']);
+        $this->assertSame("5", $props['distinct_id']);
+        $this->assertSame("7", $props['$user_id']);
+        $this->assertSame("8", $props['$device_id']);
 
         $acme = $this->_legacy->forCompany(42);
         $acme->group->set("department", "finance", array("plan" => "pro"));

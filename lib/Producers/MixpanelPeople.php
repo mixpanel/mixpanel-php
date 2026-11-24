@@ -291,7 +291,8 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
             $identity = $distinct_id;
             $this->_requireIdentityMatchesProject($identity);
             $this->_requireIdentityDistinctIdAgrees($identity);
-            $distinct_id = $identity->getDistinctId();
+            // an identity's ids are always sent as strings
+            $distinct_id = $identity->getDistinctId() === null ? null : (string) $identity->getDistinctId();
         } else {
             $identity = null;
         }

@@ -74,15 +74,8 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
             foreach (MixpanelIdentity::propertyNames() as $property) {
                 unset($super_properties[$property]);
             }
-            $identity_properties = $identity->toProperties();
-            if ($this->_isHierarchical()) {
-                // Mixpanel does not store an integer $user_id, so ids are sent as strings
-                foreach (array('$user_id', '$company_id') as $property) {
-                    if (isset($identity_properties[$property])) {
-                        $identity_properties[$property] = (string) $identity_properties[$property];
-                    }
-                }
-            }
+            // Mixpanel does not store integer ids consistently, so an identity's ids are always sent as strings
+            $identity_properties = array_map('strval', $identity->toProperties());
             $params['properties'] = array_merge($super_properties, $properties, $identity_properties);
         }
 
