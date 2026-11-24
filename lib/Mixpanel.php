@@ -189,6 +189,10 @@ class Mixpanel extends Base_MixpanelBase {
      * $acme->company->set($company_properties);
      * $acme->group->set("department", "finance", $department_properties);
      *
+     * forCompany is meant for writes that carry no identity: the company's own profile and custom group profiles.
+     * Send events and user profiles with a MixpanelIdentity that names the company. Events from the view don't add
+     * the bound company.
+     *
      * The view shares this client's queues, consumers and identity, so nothing is sent separately; this client is
      * unchanged. Identity-based people updates use the identity's own company; on a hierarchical groups project an
      * identity with a user id but no company uses this one, and the view throws InvalidArgumentException for a user
