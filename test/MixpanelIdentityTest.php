@@ -60,7 +60,7 @@ class MixpanelIdentityTest extends \PHPUnit\Framework\TestCase {
 
     public function testIdentityStringNamesItsValues() {
         $this->assertEquals("MixpanelIdentity{user_id=user_123, company_id=acme}", (string) new MixpanelIdentity(array("user_id" => "user_123", "company_id" => "acme")));
-        $this->assertTrue(new MixpanelIdentity(array("user_id" => "user_123", "company_id" => "acme"))->isHierarchical());
+        $this->assertTrue((new MixpanelIdentity(array("user_id" => "user_123", "company_id" => "acme")))->isHierarchical());
     }
 
     public function testIdentityRejectsWhitespaceOnlyUserAndCompany() {
