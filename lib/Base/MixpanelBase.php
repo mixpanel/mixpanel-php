@@ -84,6 +84,8 @@ class Base_MixpanelBase {
      * Hierarchical groups is a project setting, so a hierarchical identity is only valid on a client created for a
      * hierarchical groups project. Ingestion accepts the keys on any project but ignores them, so a mismatch would
      * be silently mis-attributed.
+     * On a hierarchical groups project the identity's user_id and company_id must not contain "|", which
+     * Mixpanel cannot store or split out of a combined distinct id.
      * @param MixpanelIdentity $identity
      * @throws InvalidArgumentException if the identity does not fit this project
      */
@@ -96,6 +98,25 @@ class Base_MixpanelBase {
             throw new InvalidArgumentException($identity . " requires a hierarchical groups client: "
                 . "new Mixpanel(\$token, array('hierarchical_groups' => true))");
         }
+        if ($this->_isHierarchical()) {
+            self::_requireNoSeparator('user_id', $identity->getUserId());
+            self::_requireNoSeparator('company_id', $identity->getCompanyId());
+        }
+    }
+
+
+    /**
+     * Hierarchical groups user and company ids must not contain "|": Mixpanel drops such a profile update, and a
+     * combined distinct id ($company:{company}|$user:{user}) built from one cannot be split.
+     * @param string $name what the message calls the id, e.g. 'company_id'
+     * @param mixed $value the id, or null if absent
+     * @throws InvalidArgumentException if $value is a string containing "|"
+     */
+    protected static function _requireNoSeparator($name, $value) {
+        if (is_string($value) && strpos($value, "|") !== false) {
+            throw new InvalidArgumentException($name . " " . $value . " contains \"|\", which hierarchical groups "
+                . "projects do not allow in user or company ids. Nothing sent");
+        }
     }
 
 
@@ -105,7 +126,7 @@ class Base_MixpanelBase {
      * @param mixed $distinct_id
      * @return array array($company_id, $user_id), or null unless $distinct_id starts with $company: and
      * contains |$user:
-     * @throws InvalidArgumentException if the company or the user is empty or only whitespace
+     * @throws InvalidArgumentException if the company or the user is empty or only whitespace, or contains "|"
      */
     protected static function _parseCombinedDistinctId($distinct_id) {
         $prefix = '$company:';
@@ -125,6 +146,8 @@ class Base_MixpanelBase {
             throw new InvalidArgumentException("distinct_id " . $distinct_id . " names a company or user that is "
                 . "empty or only whitespace. Nothing sent");
         }
+        self::_requireNoSeparator('company_id', $company_id);
+        self::_requireNoSeparator('user_id', $user_id);
         return array($company_id, $user_id);
     }
 

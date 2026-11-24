@@ -35,7 +35,8 @@ class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
      * @internal Use Mixpanel::forCompany().
      * @param string|int $company_id the id of the top-level company
      * @return Producers_MixpanelGroups
-     * @throws InvalidArgumentException if $company_id is empty or only whitespace
+     * @throws InvalidArgumentException if $company_id is empty or only whitespace, or on a hierarchical groups
+     * project contains "|"
      */
     public function forCompany($company_id) {
         if ((!is_string($company_id) && !is_int($company_id)) || $company_id === "") {
@@ -43,6 +44,9 @@ class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
         }
         if (MixpanelIdentity::isBlank($company_id)) {
             throw new InvalidArgumentException("company_id must not be only whitespace");
+        }
+        if ($this->_isHierarchical()) {
+            self::_requireNoSeparator('company_id', $company_id);
         }
         $view = clone $this;
         $view->_bind($this->_root === null ? $this : $this->_root, $company_id);

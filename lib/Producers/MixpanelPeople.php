@@ -17,6 +17,8 @@ require_once(dirname(__FILE__) . "/MixpanelGroups.php");
  * named either by an identity with a user id and a company, or by a distinct id (given directly or as the identity's
  * distinct_id) of the form $company:{company}|$user:{user}. Any other distinct id throws InvalidArgumentException.
  * An identity with a user id but no company uses the company a client bound with Mixpanel::forCompany() is bound to.
+ * /groups has no alias lookup, so passing $ignore_alias = true throws InvalidArgumentException there, and it does
+ * not geolocate, so $ip is ignored for these user profiles (it is still sent).
  */
 class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
 
@@ -87,7 +89,7 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      */
     public function set($distinct_id, $props, $ip = null, $ignore_time = false, $ignore_alias = false) {
         if (empty($props)) {
-            $this->_validateProfileIdForEmptyUpdate($distinct_id);
+            $this->_validateProfileIdForEmptyUpdate($distinct_id, $ignore_alias);
             return;
         }
         $this->_enqueueProfileUpdate($distinct_id, '$set', $props, $ip, $ignore_time, $ignore_alias);
@@ -104,7 +106,7 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      */
     public function setOnce($distinct_id, $props, $ip = null, $ignore_time = false, $ignore_alias = false) {
         if (empty($props)) {
-            $this->_validateProfileIdForEmptyUpdate($distinct_id);
+            $this->_validateProfileIdForEmptyUpdate($distinct_id, $ignore_alias);
             return;
         }
         $this->_enqueueProfileUpdate($distinct_id, '$set_once', $props, $ip, $ignore_time, $ignore_alias);
@@ -122,7 +124,7 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      */
     public function remove($distinct_id, $props, $ip = null, $ignore_time = false, $ignore_alias = false) {
         if (empty($props)) {
-            $this->_validateProfileIdForEmptyUpdate($distinct_id);
+            $this->_validateProfileIdForEmptyUpdate($distinct_id, $ignore_alias);
             return;
         }
         $this->_enqueueProfileUpdate($distinct_id, '$unset', $props, $ip, $ignore_time, $ignore_alias);
@@ -221,11 +223,28 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      * groups project, is still validated first, so a call that could never be sent throws as it would with
      * properties. A plain distinct id without hierarchical groups returns silently, as it always has.
      * @param string|int|MixpanelIdentity $distinct_id
-     * @throws InvalidArgumentException|LogicException as _resolveProfileTarget()
+     * @param boolean $ignore_alias
+     * @throws InvalidArgumentException|LogicException as _resolveProfileTarget() and _requireNoIgnoreAlias()
      */
-    private function _validateProfileIdForEmptyUpdate($distinct_id) {
+    private function _validateProfileIdForEmptyUpdate($distinct_id, $ignore_alias) {
         if ($distinct_id instanceof MixpanelIdentity || $this->_isHierarchical()) {
-            $this->_resolveProfileTarget($distinct_id);
+            $target = $this->_resolveProfileTarget($distinct_id);
+            if (!array_key_exists('distinct_id', $target)) {
+                $this->_requireNoIgnoreAlias($ignore_alias);
+            }
+        }
+    }
+
+    /**
+     * A hierarchical groups user profile update goes to /groups, which rejects the whole update if it carries
+     * $ignore_alias, since group profiles have no alias lookup.
+     * @param boolean $ignore_alias
+     * @throws InvalidArgumentException if $ignore_alias is true
+     */
+    private function _requireNoIgnoreAlias($ignore_alias) {
+        if ($ignore_alias === true) {
+            throw new InvalidArgumentException("ignore_alias is not supported for hierarchical groups user "
+                . "profiles, which are group profiles keyed by \$user_id and have no alias lookup. Nothing sent");
         }
     }
 
@@ -244,6 +263,7 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      * @param boolean $ignore_time
      * @param boolean $ignore_alias
      * @throws InvalidArgumentException if the distinct id or identity cannot name a user profile in this project
+     * @throws InvalidArgumentException on a hierarchical groups user profile, if $ignore_alias is true
      * @throws LogicException if a hierarchical groups identity names no company and the client is not bound to one
      */
     private function _enqueueProfileUpdate($distinct_id, $operation, $value, $ip, $ignore_time, $ignore_alias) {
@@ -330,13 +350,15 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
      * @param string|int $company_id
      * @param string $operation
      * @param mixed $value
-     * @param string|null $ip
+     * @param string|null $ip sent as given, but /groups does not use it for geolocation
      * @param boolean $ignore_time
-     * @param boolean $ignore_alias
+     * @param boolean $ignore_alias must not be true: /groups has no alias lookup
+     * @throws InvalidArgumentException if $ignore_alias is true
      */
     private function _enqueueUserGroupUpdate($user_id, $company_id, $operation, $value, $ip, $ignore_time,
                                              $ignore_alias) {
         $this->_requireSupportedOperation($operation);
+        $this->_requireNoIgnoreAlias($ignore_alias);
         $payload = array(
             '$token' => $this->_token,
             '$group_key' => '$user_id',
@@ -346,7 +368,6 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
         );
         if ($ip !== null) $payload['$ip'] = $ip;
         if ($ignore_time === true) $payload['$ignore_time'] = true;
-        if ($ignore_alias === true) $payload['$ignore_alias'] = true;
         // $company_id must be top-level, not inside the operation payload
         $payload['$company_id'] = (string) $company_id;
         $this->getGroupsProducer()->enqueue($payload);

@@ -40,6 +40,31 @@ class HierarchicalGroupsTest_OptionsConsumer extends ConsumerStrategies_Abstract
     }
 }
 
+/**
+ * A subclass written against the two-argument track() of earlier releases; PHP 8 refuses to load it if the parent
+ * declares more parameters
+ */
+class HierarchicalGroupsTest_TwoArgumentMixpanel extends Mixpanel {
+
+    public $tracked = array();
+
+    public function track($event, $properties = array()) {
+        $this->tracked[] = $event;
+        parent::track($event, $properties);
+    }
+}
+
+/**
+ * The same, for the event producer
+ */
+class HierarchicalGroupsTest_TwoArgumentEvents extends Producers_MixpanelEvents {
+
+    public function track($event, $properties = array()) {
+        $properties["subclass"] = true;
+        parent::track($event, $properties);
+    }
+}
+
 class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
 
     /**
@@ -535,12 +560,13 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
         $this->assertCount(0, $this->_hg->group->getQueue());
     }
 
-    public function testCombinedDistinctIdSplitsAtTheFirstUserSeparator() {
-        $this->_hg->people->set('$company:acme|$user:a|$user:b', array("plan" => "pro"));
-        $msg = self::lastMessage($this->_hg->group);
-
-        $this->assertEquals("acme", $msg['$company_id']);
-        $this->assertEquals('a|$user:b', $msg['$group_id']);
+    public function testCombinedDistinctIdWithASeparatorInItsUserIsRejected() {
+        $people = $this->_hg->people;
+        $e = $this->assertThrows("InvalidArgumentException", function () use ($people) {
+            $people->set('$company:acme|$user:a|$user:b', array("plan" => "pro"));
+        });
+        $this->assertMessageContains('"|"', $e);
+        $this->assertCount(0, $this->_hg->group->getQueue());
     }
 
     public function testCombinedDistinctIdKeepsIpAndIgnoreTime() {
@@ -1666,6 +1692,161 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
             $legacy->track("Signup");
             $this->assertSame($blank, self::lastEventProperties($legacy)['distinct_id']);
         }
+    }
+
+    // #endregion
+
+    // #region Review fixes
+
+    public function testSubclassesOverridingTwoArgumentTrackStillLoadAndTrack() {
+        $mp = new HierarchicalGroupsTest_TwoArgumentMixpanel("token");
+        $mp->track("Signup", array("plan" => "pro"));
+        $this->assertEquals(array("Signup"), $mp->tracked);
+        $mp->reset();
+
+        $events = new HierarchicalGroupsTest_TwoArgumentEvents("token");
+        $events->track("Signup", array("plan" => "pro"));
+        $props = self::lastEventProperties($events);
+        $this->assertTrue($props["subclass"]);
+        $this->assertEquals("pro", $props["plan"]);
+        $events->reset();
+
+        $method = new ReflectionMethod("Mixpanel", "track");
+        $this->assertEquals(2, $method->getNumberOfParameters());
+        $method = new ReflectionMethod("Producers_MixpanelEvents", "track");
+        $this->assertEquals(2, $method->getNumberOfParameters());
+    }
+
+    public function testTrackStillTakesAnIdentityAsAThirdArgument() {
+        $this->_hg_events->track("Signup", array(), self::hgUser());
+        $props = self::lastEventProperties($this->_hg_events);
+        $this->assertSame("user_123", $props['$user_id']);
+        $this->assertSame("acme", $props['$company_id']);
+
+        $this->_hg_events->track("Signup", array("distinct_id" => "d1"));
+        $props = self::lastEventProperties($this->_hg_events);
+        $this->assertArrayNotHasKey('$user_id', $props);
+    }
+
+    public function testSeparatorInHierarchicalIdsIsRejected() {
+        $hg = $this->_hg;
+        $events = $this->_hg_events;
+        $identities = array(
+            array("user_id" => "a|b", "company_id" => "acme"),
+            array("user_id" => "user_123", "company_id" => "ac|me"),
+            array("user_id" => "a|b"),
+            array("company_id" => "ac|me"),
+        );
+        foreach ($identities as $ids) {
+            $identity = new MixpanelIdentity($ids);
+            $calls = array(
+                function () use ($events, $identity) { $events->track("Signup", array(), $identity); },
+                function () use ($hg, $identity) { $hg->track("Signup", array(), $identity); },
+                function () use ($events, $identity) { $events->identify($identity); },
+                function () use ($hg, $identity) { $hg->people->set($identity, array("plan" => "pro")); },
+                function () use ($hg, $identity) { $hg->people->set($identity, array()); },
+            );
+            foreach ($calls as $call) {
+                $e = $this->assertThrows("InvalidArgumentException", $call);
+                $this->assertMessageContains('"|"', $e);
+            }
+        }
+        $this->assertNull($events->getIdentity());
+        $this->assertCount(0, $events->getQueue());
+        $this->assertCount(0, $hg->group->getQueue());
+    }
+
+    public function testSeparatorInForCompanyIsRejectedForHierarchicalGroups() {
+        $hg = $this->_hg;
+        $this->assertThrows("InvalidArgumentException", function () use ($hg) {
+            $hg->forCompany("ac|me");
+        });
+        $this->assertThrows("InvalidArgumentException", function () use ($hg) {
+            $hg->group->forCompany("ac|me");
+        });
+    }
+
+    public function testSeparatorInCombinedDistinctIdPartsIsRejected() {
+        $events = $this->_hg_events;
+        $people = $this->_hg->people;
+        foreach (array('$company:ac|me|$user:u1', '$company:c1|$user:u|1') as $id) {
+            $calls = array(
+                function () use ($events, $id) { $events->track("Signup", array("distinct_id" => $id)); },
+                function () use ($events, $id) {
+                    $events->identify(new MixpanelIdentity(array("distinct_id" => $id)));
+                },
+                function () use ($people, $id) { $people->set($id, array("plan" => "pro")); },
+                function () use ($people, $id) {
+                    $people->set(new MixpanelIdentity(array("distinct_id" => $id)), array("plan" => "pro"));
+                },
+            );
+            foreach ($calls as $call) {
+                $e = $this->assertThrows("InvalidArgumentException", $call);
+                $this->assertMessageContains('"|"', $e);
+            }
+        }
+        $this->assertCount(0, $events->getQueue());
+        $this->assertCount(0, $this->_hg->group->getQueue());
+    }
+
+    public function testSeparatorInIdsIsUnchangedForLegacy() {
+        $identity = new MixpanelIdentity(array("user_id" => "a|b", "device_id" => "d|1"));
+        $this->_legacy_events->track("Signup", array(), $identity);
+        $props = self::lastEventProperties($this->_legacy_events);
+        $this->assertSame("a|b", $props['$user_id']);
+
+        $this->_legacy_events->track("Signup", array("distinct_id" => '$company:ac|me|$user:u|1'));
+        $props = self::lastEventProperties($this->_legacy_events);
+        $this->assertSame('$company:ac|me|$user:u|1', $props['distinct_id']);
+
+        $this->_legacy->people->set('$company:ac|me|$user:u|1', array("plan" => "pro"));
+        $this->assertSame('$company:ac|me|$user:u|1', self::lastMessage($this->_legacy->people)['$distinct_id']);
+
+        $this->_legacy->forCompany("ac|me")->group->set("team", "t1", array("plan" => "pro"));
+        $this->assertSame("ac|me", self::lastMessage($this->_legacy->group)['$company_id']);
+    }
+
+    public function testSeparatorInHierarchicalDeviceIdAndCustomGroupIdIsAccepted() {
+        $identity = new MixpanelIdentity(array("user_id" => "user_123", "company_id" => "acme", "device_id" => "d|1"));
+        $this->_hg_events->track("Signup", array(), $identity);
+        $this->assertSame("d|1", self::lastEventProperties($this->_hg_events)['$device_id']);
+
+        $this->_hg->forCompany("acme")->group->set("team", "t|1", array("plan" => "pro"));
+        $this->assertSame("t|1", self::lastMessage($this->_hg->group)['$group_id']);
+    }
+
+    public function testIgnoreAliasIsRejectedForHierarchicalUserProfiles() {
+        $people = $this->_hg->people;
+        $targets = array(self::hgUser(), '$company:acme|$user:user_123');
+        foreach ($targets as $target) {
+            $calls = array(
+                function () use ($people, $target) { $people->set($target, array("a" => 1), null, false, true); },
+                function () use ($people, $target) { $people->setOnce($target, array("a" => 1), null, false, true); },
+                function () use ($people, $target) { $people->remove($target, array("a"), null, false, true); },
+                function () use ($people, $target) { $people->append($target, "l", array(1), null, false, true); },
+                function () use ($people, $target) { $people->deleteUser($target, null, false, true); },
+                function () use ($people, $target) { $people->set($target, array(), null, false, true); },
+            );
+            foreach ($calls as $call) {
+                $e = $this->assertThrows("InvalidArgumentException", $call);
+                $this->assertMessageContains("ignore_alias", $e);
+            }
+        }
+        $this->assertCount(0, $this->_hg->group->getQueue());
+
+        // false, the default, is fine and nothing is added for it
+        $people->set(self::hgUser(), array("a" => 1), "1.2.3.4", false, false);
+        $msg = self::lastMessage($this->_hg->group);
+        $this->assertArrayNotHasKey('$ignore_alias', $msg);
+        $this->assertEquals("1.2.3.4", $msg['$ip']);
+    }
+
+    public function testIgnoreAliasIsUnchangedForLegacy() {
+        $this->_legacy->people->set("user_123", array("a" => 1), null, false, true);
+        $this->assertTrue(self::lastMessage($this->_legacy->people)['$ignore_alias']);
+        $this->_legacy->people->set(new MixpanelIdentity(array("distinct_id" => "user_123")), array("a" => 1),
+            null, false, true);
+        $this->assertTrue(self::lastMessage($this->_legacy->people)['$ignore_alias']);
     }
 
     // #endregion

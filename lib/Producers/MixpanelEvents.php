@@ -25,7 +25,11 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
     /**
      * Track an event defined by $event associated with metadata defined by $properties
      *
-     * When an identity applies, either the $identity argument or one set with identify(MixpanelIdentity), its keys
+     * Pass a MixpanelIdentity as an optional third argument, track($event, $properties, $identity), to say who
+     * the event belongs to, for this event only. It is read with func_get_arg() rather than declared, so
+     * subclasses that override track($event, $properties) stay compatible.
+     *
+     * When an identity applies, either that third argument or one set with identify(MixpanelIdentity), its keys
      * (distinct_id, $user_id, $company_id, $device_id) are written after $properties and replace any values for the
      * same keys; other properties are kept. Identity keys from super properties are not used, so an identity with
      * no distinct id sends no distinct_id. On a hierarchical groups project the identity's $user_id and $company_id
@@ -36,12 +40,12 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
      * the property and drop the other part of the id.
      * @param string $event
      * @param array $properties
-     * @param MixpanelIdentity|null $identity [optional] who the event belongs to, for this event only
      * @throws InvalidArgumentException if the identity does not fit this project, or on a hierarchical groups
      * project if a combined distinct_id names a company or user that is empty or only whitespace, or one that
      * differs from the $company_id or $user_id property or from the identity's own company_id or user_id
      */
-    public function track($event, $properties = array(), $identity = null) {
+    public function track($event, $properties = array()) {
+        $identity = func_num_args() > 2 ? func_get_arg(2) : null;
         // Without hierarchical groups, track($event, $properties) ignored any extra argument; keep that.
         if ($identity !== null && !($identity instanceof MixpanelIdentity) && !$this->_isHierarchical()) {
             $identity = null;

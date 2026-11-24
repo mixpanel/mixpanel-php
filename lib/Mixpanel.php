@@ -195,7 +195,8 @@ class Mixpanel extends Base_MixpanelBase {
      * from another company.
      * @param string|int $company_id the id of the top-level company
      * @return Mixpanel
-     * @throws InvalidArgumentException if $company_id is empty or only whitespace
+     * @throws InvalidArgumentException if $company_id is empty or only whitespace, or on a hierarchical groups
+     * project contains "|"
      */
     public function forCompany($company_id) {
         $view = clone $this;
@@ -275,14 +276,18 @@ class Mixpanel extends Base_MixpanelBase {
     /**
      * Track an event defined by $event associated with metadata defined by $properties
      *
-     * When an identity applies, either $identity or one set with identify(MixpanelIdentity), its keys replace any
-     * values for the same keys in $properties.
+     * Pass a MixpanelIdentity as an optional third argument, track($event, $properties, $identity), to say who
+     * this event belongs to, overriding identify(). It is read with func_get_arg() rather than declared, so
+     * subclasses that override track($event, $properties) stay compatible.
+     *
+     * When an identity applies, either that third argument or one set with identify(MixpanelIdentity), its keys
+     * replace any values for the same keys in $properties.
      * @param string $event
      * @param array $properties
-     * @param MixpanelIdentity|null $identity [optional] who this event belongs to, overriding identify()
      * @throws InvalidArgumentException if the identity does not fit this project
      */
-    public function track($event, $properties = array(), $identity = null) {
+    public function track($event, $properties = array()) {
+        $identity = func_num_args() > 2 ? func_get_arg(2) : null;
         $this->_events->track($event, $properties, $identity);
     }
 
