@@ -75,16 +75,13 @@ class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
 
 
     /**
-     * Returns the company bound by forCompany(), or null. On a hierarchical groups project it is returned as a
-     * string, the form it is sent in, since Mixpanel does not store an integer $company_id.
+     * Returns the company bound by forCompany(), or null. It is returned as a string, the form it is sent in,
+     * since Mixpanel does not store an integer $company_id.
      * @internal Used by the company producer.
-     * @return string|int|null
+     * @return string|null
      */
     public function getCompanyId() {
-        if ($this->_company_id !== null && $this->_isHierarchical()) {
-            return (string) $this->_company_id;
-        }
-        return $this->_company_id;
+        return $this->_company_id === null ? null : (string) $this->_company_id;
     }
 
 

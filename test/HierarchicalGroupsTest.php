@@ -1249,8 +1249,8 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
         $this->assertSame("acme", $msg['$company_id']);
     }
 
-    public function testIntegerIdsAreUnchangedForLegacy() {
-        // an identity's ids are always sent as strings; only the bound company is sent as given on legacy
+    public function testIntegerIdsAreSentAsStringsForLegacy() {
+        // an identity's ids and the bound company are always sent as strings
         $this->_legacy_events->track("Signup", array(), self::identity(array("distinct_id" => 5, "user_id" => 7, "device_id" => 8)));
         $props = self::lastEventProperties($this->_legacy_events);
         $this->assertSame("5", $props['distinct_id']);
@@ -1259,11 +1259,11 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
 
         $acme = $this->_legacy->forCompany(42);
         $acme->group->set("department", "finance", array("plan" => "pro"));
-        $this->assertSame(42, self::lastMessage($this->_legacy->group)['$company_id']);
+        $this->assertSame("42", self::lastMessage($this->_legacy->group)['$company_id']);
         $acme->company->set(array("tier" => "enterprise"));
         $msg = self::lastMessage($this->_legacy->group);
-        $this->assertSame(42, $msg['$group_id']);
-        $this->assertSame(42, $msg['$company_id']);
+        $this->assertSame("42", $msg['$group_id']);
+        $this->assertSame("42", $msg['$company_id']);
     }
 
     public function testCombinedDistinctIdConflictingWithPropertiesIsRejected() {
