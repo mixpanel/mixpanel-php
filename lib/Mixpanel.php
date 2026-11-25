@@ -119,7 +119,7 @@ require_once(dirname(__FILE__) . "/Producers/MixpanelCompany.php");
  * $mp = Mixpanel::getInstance("MY_TOKEN", array("hierarchical_groups" => true));
  *
  * $identity = new MixpanelIdentity(array("user_id" => "user_123", "company_id" => "acme"));
- * $mp->identify($identity);
+ * $mp->identifyWithIdentity($identity);
  * $mp->track("Signup");
  * $mp->people->set($identity, array("role" => "admin"));
  * $mp->forCompany("acme")->company->set(array("tier" => "enterprise"));
@@ -265,16 +265,23 @@ class Mixpanel extends Base_MixpanelBase {
     /**
      * Identify the user you want to associate to tracked events. The $anon_id must be UUID v4 format and not already merged to an $identified_id.
      * All identify calls with a new and valid $anon_id will trigger a track $identify event, and merge to the $identified_id.
-     *
-     * Pass a MixpanelIdentity instead of a user id to send its keys (distinct_id, $user_id, $company_id, $device_id)
-     * with every later event, replacing any identity set earlier; give it a device_id rather than passing an $anon_id.
-     * Identifying with a user id afterwards clears the identity.
-     * @param string|int|MixpanelIdentity $user_id
+     * @param string|int $user_id
      * @param string|int $anon_id [optional]
-     * @throws InvalidArgumentException if the identity does not fit this project
      */
     public function identify($user_id, $anon_id = null) {
         $this->_events->identify($user_id, $anon_id);
+    }
+
+
+    /**
+     * Identify who every later event belongs to with a MixpanelIdentity, in place of any identity set earlier. Its
+     * ids are added to every later event that does not pass its own identity. Identifying with a user id afterwards
+     * clears it.
+     * @param MixpanelIdentity $identity
+     * @throws InvalidArgumentException if the identity does not fit this project
+     */
+    public function identifyWithIdentity(MixpanelIdentity $identity) {
+        $this->_events->identifyWithIdentity($identity);
     }
 
     /**
@@ -285,7 +292,7 @@ class Mixpanel extends Base_MixpanelBase {
      * subclasses that override track($event, $properties) stay compatible; trackWithIdentity() is the same call
      * with the identity declared, for static analysers and IDEs.
      *
-     * When an identity applies, either that third argument or one set with identify(MixpanelIdentity), its keys
+     * When an identity applies, either that third argument or one set with identifyWithIdentity(), its keys
      * replace any values for the same keys in $properties.
      * @param string $event
      * @param array $properties
@@ -314,7 +321,7 @@ class Mixpanel extends Base_MixpanelBase {
 
 
     /**
-     * Returns the identity set by identify(MixpanelIdentity), or null if there is none
+     * Returns the identity set by identifyWithIdentity(), or null if there is none
      * @return MixpanelIdentity|null
      */
     public function getIdentity() {

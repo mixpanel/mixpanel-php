@@ -155,12 +155,12 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
         $this->assertEquals("token", $props['token']);
     }
 
-    public function testHierarchicalEventWithDeviceId() {
-        $this->_hg_events->track("Signup", array(),
-            self::identity(array("user_id" => "user_123", "company_id" => "acme", "device_id" => "device_abc")));
+    public function testDeviceIdIsAnOrdinaryEventProperty() {
+        $this->_hg_events->track("Signup", array('$device_id' => "device_abc"), self::hgUser());
         $props = self::lastEventProperties($this->_hg_events);
 
         $this->assertEquals("device_abc", $props['$device_id']);
+        $this->assertEquals("user_123", $props['$user_id']);
         $this->assertArrayNotHasKey("distinct_id", $props);
     }
 
@@ -194,8 +194,8 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
 
     public function testUserAndDeviceWithoutCompanyIsValidForSimplifiedIdMerge() {
         // $user_id with $device_id is the standard non-hierarchical server-side identity.
-        $this->_legacy_events->track("Signup", array(),
-            self::identity(array("user_id" => "user_123", "device_id" => "device_abc")));
+        $this->_legacy_events->track("Signup", array('$device_id' => "device_abc"),
+            self::identity(array("user_id" => "user_123")));
         $props = self::lastEventProperties($this->_legacy_events);
 
         $this->assertEquals("user_123", $props['$user_id']);
@@ -212,24 +212,13 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
         $this->assertArrayNotHasKey('$company_id', $props);
     }
 
-    public function testUserWithDeviceButNoCompanyIsAllowedForHierarchicalGroups() {
-        // Mixpanel ignores the user id and keeps the event under the device, which later links to
-        // the company-scoped user. Recoverable, so the library does not refuse it.
-        $this->_hg_events->track("Signup", array(),
-            self::identity(array("user_id" => "user_123", "device_id" => "device_abc")));
-        $props = self::lastEventProperties($this->_hg_events);
-
-        $this->assertEquals("device_abc", $props['$device_id']);
-        $this->assertArrayNotHasKey('$company_id', $props);
-    }
-
     public function testAnonymousDeviceEvent() {
         foreach (array($this->_hg_events, $this->_legacy_events) as $events) {
-            $events->track("Page View", array(), self::identity(array("device_id" => "device_abc")));
+            $events->track("Page View", array("distinct_id" => '$device:device_abc', '$device_id' => "device_abc"));
             $props = self::lastEventProperties($events);
 
+            $this->assertEquals('$device:device_abc', $props['distinct_id']);
             $this->assertEquals("device_abc", $props['$device_id']);
-            $this->assertArrayNotHasKey("distinct_id", $props);
             $this->assertArrayNotHasKey('$user_id', $props);
             $this->assertArrayNotHasKey('$company_id', $props);
         }
@@ -275,7 +264,7 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
             });
             $this->assertMessageContains("hierarchical_groups", $e);
             $this->assertThrows("InvalidArgumentException", function () use ($events, $identity) {
-                $events->identify($identity);
+                $events->identifyWithIdentity($identity);
             });
         }
         $this->assertNull($events->getIdentity());
@@ -331,7 +320,7 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
     }
 
     public function testIdentifyWithIdentityAppliesToLaterEvents() {
-        $this->_hg_events->identify(self::hgUser());
+        $this->_hg_events->identifyWithIdentity(self::hgUser());
         $this->_hg_events->track("Signup", array("plan" => "pro", '$user_id' => "wrong"));
         $props = self::lastEventProperties($this->_hg_events);
 
@@ -344,27 +333,25 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
     public function testIdentifySwitchDoesNotLeakPreviousIdentityKeys() {
         $events = $this->_hg_events;
 
-        // a stale distinct id from a plain identify, then a device and company from an identity
+        // a stale distinct id from a plain identify, then a company from an identity
         $events->identify("old_user");
-        $events->identify(self::identity(array("user_id" => "user_123", "company_id" => "acme",
-            "device_id" => "device_abc")));
+        $events->identifyWithIdentity(self::identity(array("user_id" => "user_123", "company_id" => "acme")));
         $events->track("First");
         $first = self::lastEventProperties($events);
         $this->assertArrayNotHasKey("distinct_id", $first);
-        $this->assertEquals("device_abc", $first['$device_id']);
+        $this->assertEquals("acme", $first['$company_id']);
 
-        $events->identify(self::identity(array("user_id" => "user_456", "device_id" => "device_def")));
+        $events->identifyWithIdentity(self::identity(array("user_id" => "user_456")));
         $events->track("Second");
         $second = self::lastEventProperties($events);
         $this->assertArrayNotHasKey('$company_id', $second);
         $this->assertEquals("user_456", $second['$user_id']);
-        $this->assertEquals("device_def", $second['$device_id']);
 
         $events->identify("user_789");
         $events->track("Third");
         $third = self::lastEventProperties($events);
         $this->assertEquals("user_789", $third['distinct_id']);
-        foreach (array('$user_id', '$company_id', '$device_id') as $key) {
+        foreach (array('$user_id', '$company_id') as $key) {
             $this->assertArrayNotHasKey($key, $third);
         }
         $this->assertNull($events->getIdentity());
@@ -379,12 +366,15 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
         $this->assertEquals("user_123", $props['$user_id']);
     }
 
-    public function testIdentifyWithIdentityRejectsAnonId() {
-        $events = $this->_hg_events;
-        $this->assertThrows("InvalidArgumentException", function () use ($events) {
-            $events->identify(HierarchicalGroupsTest::hgUserForClosure(), "0b54b29e-7b1f-4c4a-9d4f-1a6e0e2f3a4b");
-        });
-        $this->assertNull($events->getIdentity());
+    public function testIdentifyRefusesIdentity() {
+        foreach (array($this->_hg_events, $this->_legacy_events) as $events) {
+            $e = $this->assertThrows("InvalidArgumentException", function () use ($events) {
+                $events->identify(HierarchicalGroupsTest::hgUserForClosure());
+            });
+            $this->assertMessageContains("identifyWithIdentity", $e);
+            $this->assertNull($events->getIdentity());
+            $this->assertCount(0, $events->getQueue());
+        }
     }
 
     public static function hgUserForClosure() {
@@ -392,7 +382,7 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
     }
 
     public function testFacadeTrackAndIdentifyAcceptIdentity() {
-        $this->_hg->identify(self::hgUser());
+        $this->_hg->identifyWithIdentity(self::hgUser());
         $this->assertEquals(self::hgUser(), $this->_hg->getIdentity());
 
         $mp = $this->_legacy;
@@ -660,15 +650,6 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
         }
     }
 
-    public function testForCompanyUsesTheBoundCompanyForAUserAndDeviceIdentity() {
-        $this->_hg->forCompany("acme")->people->set(
-            self::identity(array("user_id" => "user_123", "device_id" => "device_abc")), array("plan" => "pro"));
-        $msg = self::lastMessage($this->_hg->group);
-
-        $this->assertSame("acme", $msg['$company_id']);
-        $this->assertEquals("user_123", $msg['$group_id']);
-    }
-
     public function testUnboundClientStillRefusesAUserOnlyIdentity() {
         $people = $this->_hg->people;
         $this->assertThrows("LogicException", function () use ($people) {
@@ -780,32 +761,13 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
         $this->assertMessageContains("forCompany(\$company_id)->company->set(\$props)", $e);
     }
 
-    public function testDeviceIdentityCannotIdentifyAProfile() {
-        foreach (array($this->_hg->people, $this->_legacy->people) as $people) {
-            $this->assertThrows("InvalidArgumentException", function () use ($people) {
-                $people->set(new MixpanelIdentity(array("device_id" => "device_abc")), array("plan" => "pro"));
-            });
-        }
-    }
-
     public function testUserIdentityWithoutDistinctIdIsRejectedForLegacy() {
         $people = $this->_legacy->people;
         $e = $this->assertThrows("InvalidArgumentException", function () use ($people) {
-            $people->set(new MixpanelIdentity(array("user_id" => "user_123", "device_id" => "device_abc")),
-                array("plan" => "pro"));
+            $people->set(new MixpanelIdentity(array("user_id" => "user_123")), array("plan" => "pro"));
         });
 
         $this->assertMessageContains("addressed by distinct id", $e);
-    }
-
-    public function testUserAndDeviceIdentityProfileUpdateRequiresCompany() {
-        $people = $this->_hg->people;
-        $e = $this->assertThrows("LogicException", function () use ($people) {
-            $people->set(new MixpanelIdentity(array("user_id" => "user_123", "device_id" => "device_abc")),
-                array("plan" => "pro"));
-        });
-
-        $this->assertMessageContains("company_id", $e);
     }
 
     public function testIdentityProfileUpdateRequiresACompany() {
@@ -1216,7 +1178,7 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
         $this->assertSame("3190317", $props['$company_id']);
         $this->assertSame(5, $props['count']);
 
-        $this->_hg_events->identify($ints);
+        $this->_hg_events->identifyWithIdentity($ints);
         $this->_hg_events->track("Signup");
         $props = self::lastEventProperties($this->_hg_events);
         $this->assertSame("3190316", $props['$user_id']);
@@ -1251,11 +1213,10 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
 
     public function testIntegerIdsAreSentAsStringsForLegacy() {
         // an identity's ids and the bound company are always sent as strings
-        $this->_legacy_events->track("Signup", array(), self::identity(array("distinct_id" => 5, "user_id" => 7, "device_id" => 8)));
+        $this->_legacy_events->track("Signup", array(), self::identity(array("distinct_id" => 5, "user_id" => 7)));
         $props = self::lastEventProperties($this->_legacy_events);
         $this->assertSame("5", $props['distinct_id']);
         $this->assertSame("7", $props['$user_id']);
-        $this->assertSame("8", $props['$device_id']);
 
         $acme = $this->_legacy->forCompany(42);
         $acme->group->set("department", "finance", array("plan" => "pro"));
@@ -1314,7 +1275,7 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
             function () use ($people, $identity) { $people->remove($identity, array("plan")); },
             function () use ($people, $identity) { $people->deleteUser($identity); },
             function () use ($events, $identity) { $events->track("Signup", array(), $identity); },
-            function () use ($events, $identity) { $events->identify($identity); },
+            function () use ($events, $identity) { $events->identifyWithIdentity($identity); },
         );
         foreach ($calls as $call) {
             $e = $this->assertThrows("InvalidArgumentException", $call);
@@ -1361,8 +1322,8 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
     }
 
     public function testIdentityWithDisagreeingDistinctIdIsUnchangedWithoutHierarchicalGroups() {
-        // Legacy identities carry only distinct_id/device_id, and legacy events never parse distinct ids
-        $identity = new MixpanelIdentity(array("distinct_id" => '$company:acme|$user:old', "device_id" => "d1"));
+        // Legacy events never parse distinct ids
+        $identity = new MixpanelIdentity(array("distinct_id" => '$company:acme|$user:old'));
         $this->_legacy_events->track("Signup", array('$user_id' => "new"), $identity);
         $properties = self::lastEventProperties($this->_legacy_events);
         $this->assertSame('$company:acme|$user:old', $properties['distinct_id']);
@@ -1513,9 +1474,9 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
                 . "whitespace. Nothing sent", $e);
 
             // identify refuses it and keeps the identity set earlier
-            $events->identify($valid);
+            $events->identifyWithIdentity($valid);
             $e = $this->assertThrows("InvalidArgumentException", function () use ($events, $identity) {
-                $events->identify($identity);
+                $events->identifyWithIdentity($identity);
             });
             $this->assertMessageContains("distinct_id " . $blank . " names a company or user that is empty or only "
                 . "whitespace. Nothing sent", $e);
@@ -1528,7 +1489,7 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
                 $hg->track("Signup", array(), $identity);
             });
             $this->assertThrows("InvalidArgumentException", function () use ($hg, $identity) {
-                $hg->identify($identity);
+                $hg->identifyWithIdentity($identity);
             });
             $this->assertNull($hg->getIdentity());
         }
@@ -1537,7 +1498,7 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
         // a valid combined id is still sent, per call and after identify
         $events->track("Signup", array(), $valid);
         $this->assertSame('$company:c|$user:u', self::lastEventProperties($events)['distinct_id']);
-        $events->identify($valid);
+        $events->identifyWithIdentity($valid);
         $events->track("Signup");
         $this->assertSame('$company:c|$user:u', self::lastEventProperties($events)['distinct_id']);
 
@@ -1553,7 +1514,7 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
             $identity = self::identity(array("distinct_id" => $blank));
             $legacy->track("Signup", array(), $identity);
             $this->assertSame($blank, self::lastEventProperties($legacy)['distinct_id']);
-            $legacy->identify($identity);
+            $legacy->identifyWithIdentity($identity);
             $legacy->track("Signup");
             $this->assertSame($blank, self::lastEventProperties($legacy)['distinct_id']);
         }
@@ -1637,7 +1598,7 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
             $calls = array(
                 function () use ($events, $identity) { $events->track("Signup", array(), $identity); },
                 function () use ($hg, $identity) { $hg->track("Signup", array(), $identity); },
-                function () use ($events, $identity) { $events->identify($identity); },
+                function () use ($events, $identity) { $events->identifyWithIdentity($identity); },
                 function () use ($hg, $identity) { $hg->people->set($identity, array("plan" => "pro")); },
                 function () use ($hg, $identity) { $hg->people->set($identity, array()); },
             );
@@ -1668,7 +1629,7 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
             $calls = array(
                 function () use ($events, $id) { $events->track("Signup", array("distinct_id" => $id)); },
                 function () use ($events, $id) {
-                    $events->identify(new MixpanelIdentity(array("distinct_id" => $id)));
+                    $events->identifyWithIdentity(new MixpanelIdentity(array("distinct_id" => $id)));
                 },
                 function () use ($people, $id) { $people->set($id, array("plan" => "pro")); },
                 function () use ($people, $id) {
@@ -1685,7 +1646,7 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
     }
 
     public function testSeparatorInIdsIsUnchangedForLegacy() {
-        $identity = new MixpanelIdentity(array("user_id" => "a|b", "device_id" => "d|1"));
+        $identity = new MixpanelIdentity(array("user_id" => "a|b"));
         $this->_legacy_events->track("Signup", array(), $identity);
         $props = self::lastEventProperties($this->_legacy_events);
         $this->assertSame("a|b", $props['$user_id']);
@@ -1701,11 +1662,7 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
         $this->assertSame("ac|me", self::lastMessage($this->_legacy->group)['$company_id']);
     }
 
-    public function testSeparatorInHierarchicalDeviceIdAndCustomGroupIdIsAccepted() {
-        $identity = new MixpanelIdentity(array("user_id" => "user_123", "company_id" => "acme", "device_id" => "d|1"));
-        $this->_hg_events->track("Signup", array(), $identity);
-        $this->assertSame("d|1", self::lastEventProperties($this->_hg_events)['$device_id']);
-
+    public function testSeparatorInCustomGroupIdIsAccepted() {
         $this->_hg->forCompany("acme")->group->set("team", "t|1", array("plan" => "pro"));
         $this->assertSame("t|1", self::lastMessage($this->_hg->group)['$group_id']);
     }

@@ -16,7 +16,7 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
 
 
     /**
-     * The identity set by identify(MixpanelIdentity), applied to every event that does not pass its own
+     * The identity set by identifyWithIdentity(), applied to every event that does not pass its own
      * @var MixpanelIdentity|null
      */
     private $_identity = null;
@@ -30,8 +30,8 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
      * subclasses that override track($event, $properties) stay compatible; trackWithIdentity() is the same call
      * with the identity declared, for static analysers and IDEs.
      *
-     * When an identity applies, either that third argument or one set with identify(MixpanelIdentity), its keys
-     * (distinct_id, $user_id, $company_id, $device_id) are written after $properties and replace any values for the
+     * When an identity applies, either that third argument or one set with identifyWithIdentity(), its keys
+     * (distinct_id, $user_id, $company_id) are written after $properties and replace any values for the
      * same keys; other properties are kept. Identity keys from super properties are not used, so an identity with
      * no distinct id sends no distinct_id. On a hierarchical groups project the identity's $user_id and $company_id
      * are sent as strings.
@@ -215,34 +215,23 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
      * prefix '$device:') and not already merged to an $identified_id. All identify calls with a new and valid $anon_id will
      * trigger a track $identify event, and merge to the $identified_id.
      *
-     * Pass a MixpanelIdentity instead of a user id to send its keys (distinct_id, $user_id, $company_id, $device_id)
-     * with every later event, in place of any identity set earlier. Identify with a $device_id rather than an $anon_id
-     * in that case. Identifying with a user id afterwards clears the identity.
-     * @param string|int|MixpanelIdentity $user_id
+     * Identifying with a user id clears an identity set with identifyWithIdentity().
+     * @param string|int $user_id
      * @param string|int $anon_id [optional]
-     * @throws InvalidArgumentException if the identity does not fit this project, is passed with an $anon_id, or
-     * on a hierarchical groups project has a combined distinct_id naming a company or user that is empty or only
-     * whitespace, or one that differs from the identity's own company_id or user_id
+     * @throws InvalidArgumentException if $user_id is a MixpanelIdentity: use identifyWithIdentity()
      * @throws BadMethodCallException on a hierarchical groups project, for a user id with an $anon_id: merging users
      *     is not supported there
      */
     public function identify($user_id, $anon_id = null) {
         if ($user_id instanceof MixpanelIdentity) {
-            $this->_requireIdentityMatchesProject($user_id);
-            $this->_requireIdentityDistinctIdAgrees($user_id);
-            if ($anon_id !== null) {
-                throw new InvalidArgumentException("identify(MixpanelIdentity) takes no anon_id; set device_id on "
-                    . $user_id . " instead");
-            }
-            // drop identity keys left by an earlier identify so they cannot leak into this identity's events
-            $this->unregisterAll(MixpanelIdentity::propertyNames());
-            $this->_identity = $user_id;
-            return;
+            throw new InvalidArgumentException("identify() takes a user id. Use identifyWithIdentity(" . $user_id
+                . ") to identify with a MixpanelIdentity");
         }
         if ($this->_isHierarchical() && !empty($anon_id)) {
             throw new BadMethodCallException("identify with an anon_id merges users, which hierarchical groups "
-                . "projects do not support: they identify a user by company and user id. Identify with a "
-                . "MixpanelIdentity with a user_id and company_id instead. Nothing sent");
+                . "projects do not support: they identify a user by company and user id. Use "
+                . "identifyWithIdentity(new MixpanelIdentity(array('user_id' => ..., 'company_id' => ...))) "
+                . "instead. Nothing sent");
         }
         $this->_identity = null;
         $this->register("distinct_id", $user_id);
@@ -263,7 +252,25 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
 
 
     /**
-     * Returns the identity set by identify(MixpanelIdentity), or null if there is none
+     * Identify who every later event belongs to with a MixpanelIdentity, in place of any identity set earlier. Its
+     * ids are added to every later event that does not pass its own identity. Identifying with a user id afterwards
+     * clears it.
+     * @param MixpanelIdentity $identity
+     * @throws InvalidArgumentException if the identity does not fit this project, or on a hierarchical groups project
+     * has a combined distinct_id naming a company or user that is empty or only whitespace, or one that differs from
+     * the identity's own company_id or user_id
+     */
+    public function identifyWithIdentity(MixpanelIdentity $identity) {
+        $this->_requireIdentityMatchesProject($identity);
+        $this->_requireIdentityDistinctIdAgrees($identity);
+        // drop identity keys left by an earlier identify so they cannot leak into this identity's events
+        $this->unregisterAll(MixpanelIdentity::propertyNames());
+        $this->_identity = $identity;
+    }
+
+
+    /**
+     * Returns the identity set by identifyWithIdentity(), or null if there is none
      * @return MixpanelIdentity|null
      */
     public function getIdentity() {

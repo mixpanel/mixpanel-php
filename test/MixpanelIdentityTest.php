@@ -21,7 +21,7 @@ class MixpanelIdentityTest extends \PHPUnit\Framework\TestCase {
 
     public function testIdentityRejectsEmptyValues() {
         // An empty string is a caller error; null simply leaves the value unset.
-        foreach (array("distinct_id", "user_id", "company_id", "device_id") as $key) {
+        foreach (array("distinct_id", "user_id", "company_id") as $key) {
             $this->assertThrows("InvalidArgumentException", function () use ($key) {
                 new MixpanelIdentity(array($key => ""));
             });
@@ -47,13 +47,17 @@ class MixpanelIdentityTest extends \PHPUnit\Framework\TestCase {
         $this->assertThrows("InvalidArgumentException", function () {
             new MixpanelIdentity("user_123");
         });
+        $e = $this->assertThrows("InvalidArgumentException", function () {
+            new MixpanelIdentity(array("user_id" => "user_123", "device_id" => "device_abc"));
+        });
+        $this->assertMessageContains("Unknown MixpanelIdentity key 'device_id'", $e);
     }
 
     public function testNullLeavesAValueUnset() {
-        $identity = new MixpanelIdentity(array("user_id" => "user_123", "device_id" => null));
+        $identity = new MixpanelIdentity(array("user_id" => "user_123", "company_id" => null));
 
         $this->assertEquals("user_123", $identity->getUserId());
-        $this->assertNull($identity->getDeviceId());
+        $this->assertNull($identity->getCompanyId());
         $this->assertEquals(array('$user_id' => "user_123"), $identity->toProperties());
         $this->assertFalse($identity->isHierarchical());
     }

@@ -73,11 +73,6 @@ class HierarchicalGroupsScenariosTest extends \PHPUnit\Framework\TestCase {
         return new MixpanelIdentity(array("user_id" => self::USER_ID, "company_id" => self::COMPANY_ID));
     }
 
-    private static function userWithDevice() {
-        return new MixpanelIdentity(array("user_id" => self::USER_ID, "company_id" => self::COMPANY_ID,
-            "device_id" => self::DEVICE_ID));
-    }
-
     /**
      * Flushes every queue of $mp and returns what was sent
      */
@@ -177,16 +172,18 @@ class HierarchicalGroupsScenariosTest extends \PHPUnit\Framework\TestCase {
     // #region Events
 
     public function testTrackAnonymous() {
-        $this->_mp->track("HG Event!", array("source" => "hierarchical_groups_page"),
-            new MixpanelIdentity(array("device_id" => self::DEVICE_ID)));
+        // an anonymous event is a $device: distinct id, with $device_id as an ordinary property
+        $this->_mp->track("HG Event!", array("distinct_id" => '$device:' . self::DEVICE_ID,
+            '$device_id' => self::DEVICE_ID, "source" => "hierarchical_groups_page"));
 
-        $props = $this->onlyEvent($this->_mp, "HG Event!", array('$device_id', "source"));
+        $props = $this->onlyEvent($this->_mp, "HG Event!", array("distinct_id", '$device_id', "source"));
+        $this->assertEquals('$device:' . self::DEVICE_ID, $props['distinct_id']);
         $this->assertEquals(self::DEVICE_ID, $props['$device_id']);
         $this->assertEquals("hierarchical_groups_page", $props['source']);
     }
 
     public function testTrackIdentified() {
-        $this->_mp->track("HG Event!", array(), self::userWithDevice());
+        $this->_mp->track("HG Event!", array('$device_id' => self::DEVICE_ID), self::user());
 
         $props = $this->onlyEvent($this->_mp, "HG Event!", array('$user_id', '$company_id', '$device_id'));
         $this->assertIdentified($props, self::DEVICE_ID);
@@ -466,7 +463,7 @@ class HierarchicalGroupsScenariosTest extends \PHPUnit\Framework\TestCase {
             $mp->track("HG Event!", array(), HierarchicalGroupsScenariosTest::userForClosure());
         });
         $this->assertThrows("InvalidArgumentException", function () use ($mp) {
-            $mp->identify(HierarchicalGroupsScenariosTest::userForClosure());
+            $mp->identifyWithIdentity(HierarchicalGroupsScenariosTest::userForClosure());
         });
         $this->assertThrows("InvalidArgumentException", function () use ($mp) {
             $mp->people->set(HierarchicalGroupsScenariosTest::userForClosure(), array("plan" => "pro"));

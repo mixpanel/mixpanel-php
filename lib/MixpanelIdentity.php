@@ -3,14 +3,12 @@
 /**
  * Identifies who an event or profile update belongs to.
  *
- * Mixpanel resolves an identity from whichever of distinct_id, $user_id, $company_id and $device_id an event
- * carries, so an identity sets any combination of them and leaves the rest unset:
+ * Mixpanel resolves an identity from whichever of distinct_id, $user_id and $company_id an event carries, so an
+ * identity sets any combination of them and leaves the rest unset:
  *
- * new MixpanelIdentity(array('distinct_id' => 'user_123'));                          // a plain distinct id
- * new MixpanelIdentity(array('user_id' => 'user_123', 'device_id' => 'device_abc')); // simplified id merge
- * new MixpanelIdentity(array('user_id' => 'user_123', 'company_id' => 'acme'));      // hierarchical groups
- * new MixpanelIdentity(array('device_id' => 'device_abc'));                         // anonymous, no user yet
- * new MixpanelIdentity(array('company_id' => 'acme'));                              // a company, no user
+ * new MixpanelIdentity(array('distinct_id' => 'user_123'));                     // a plain distinct id
+ * new MixpanelIdentity(array('user_id' => 'user_123', 'company_id' => 'acme')); // hierarchical groups
+ * new MixpanelIdentity(array('company_id' => 'acme'));                         // a company, no user
  *
  * Which combinations are valid depends on the project, so the Mixpanel client rather than this class decides. On a
  * hierarchical groups project the company is part of the user's identity: a $user_id sent without a $company_id
@@ -29,18 +27,16 @@ class MixpanelIdentity {
     private static $_properties = array(
         'distinct_id' => 'distinct_id',
         'user_id'     => '$user_id',
-        'company_id'  => '$company_id',
-        'device_id'   => '$device_id'
+        'company_id'  => '$company_id'
     );
 
     private $_distinct_id = null;
     private $_user_id = null;
     private $_company_id = null;
-    private $_device_id = null;
 
 
     /**
-     * Creates an identity from any of distinct_id, user_id, company_id and device_id.
+     * Creates an identity from any of distinct_id, user_id and company_id.
      *
      * A null value leaves the key unset. An empty string is a caller error rather than an absent value.
      *
@@ -49,10 +45,8 @@ class MixpanelIdentity {
      * it is one Mixpanel itself built, of the form $company:{company}|$user:{user}.
      * user_id: the user's id. On a hierarchical groups project it only needs to be unique within the company.
      * company_id: the id of the top-level company, on a hierarchical groups project.
-     * device_id: the client's device id. Events carrying one are attributed to the device until a later event
-     * names the user, at which point that earlier activity follows the user.
      *
-     * @param array $ids associative array with any of the keys distinct_id, user_id, company_id, device_id
+     * @param array $ids associative array with any of the keys distinct_id, user_id, company_id
      * @throws InvalidArgumentException if a key is unknown, a value is empty or not a string or int, user_id or
      * company_id is only whitespace, or no value is set
      */
@@ -81,10 +75,8 @@ class MixpanelIdentity {
             $field = "_" . $key;
             $this->$field = $value;
         }
-        if ($this->_distinct_id === null && $this->_user_id === null && $this->_company_id === null
-                && $this->_device_id === null) {
-            throw new InvalidArgumentException("An identity needs at least one of distinct_id, user_id, company_id "
-                . "or device_id");
+        if ($this->_distinct_id === null && $this->_user_id === null && $this->_company_id === null) {
+            throw new InvalidArgumentException("An identity needs at least one of distinct_id, user_id or company_id");
         }
     }
 
@@ -114,14 +106,6 @@ class MixpanelIdentity {
 
 
     /**
-     * @return string|int|null
-     */
-    public function getDeviceId() {
-        return $this->_device_id;
-    }
-
-
-    /**
      * @return bool true if this identity names a company, which is what sends it down Mixpanel's hierarchical
      * groups resolution
      */
@@ -131,7 +115,7 @@ class MixpanelIdentity {
 
 
     /**
-     * Returns the event properties this identity sets (distinct_id, $user_id, $company_id, $device_id), omitting
+     * Returns the event properties this identity sets (distinct_id, $user_id, $company_id), omitting
      * unset keys.
      * @internal Used by the event producer.
      * @return array
