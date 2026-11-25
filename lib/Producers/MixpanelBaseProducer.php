@@ -148,6 +148,21 @@ abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
 
 
     /**
+     * Removes the queued messages whose $group_key is $group_key, keeping the order of the rest
+     * @param string $group_key
+     */
+    protected function _removeQueuedWithGroupKey($group_key) {
+        $kept = array();
+        foreach ($this->_queue as $message) {
+            if (!(isset($message['$group_key']) && $message['$group_key'] === $group_key)) {
+                $kept[] = $message;
+            }
+        }
+        $this->_queue = $kept;
+    }
+
+
+    /**
      * Returns the in-memory queue
      * @return array
      */

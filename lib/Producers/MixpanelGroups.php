@@ -7,6 +7,85 @@ require_once(dirname(__FILE__) . "/MixpanelBaseProducer.php");
 class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
 
     /**
+     * The group key a hierarchical groups user profile is sent under
+     * @internal Used by the people producer.
+     */
+    const USER_GROUP_KEY = '$user_id';
+
+
+    /**
+     * The company bound by forCompany(), added as a top-level $company_id on every message
+     * @var string|int|null
+     */
+    private $_company_id = null;
+
+
+    /**
+     * The producer whose queue a forCompany() view writes to, or null if this producer owns its queue
+     * @var Producers_MixpanelGroups|null
+     */
+    private $_root = null;
+
+
+    /**
+     * Returns a view of this producer that adds a top-level $company_id to every group profile message it sends.
+     * Hierarchical groups projects require $company_id on every group profile update, including the company's own
+     * profile and user profiles:
+     *
+     * $acme = $mp->group->forCompany("acme");
+     * $acme->set('$company_id', "acme", $company_properties);
+     * $acme->set('$user_id', "user_123", $user_properties);
+     * $acme->set("department", "finance", $department_properties);
+     *
+     * The view shares this producer's queue and consumer, so its messages are flushed with this producer's; this
+     * producer is unchanged. Available on any project, and harmless on one that does not use hierarchical groups.
+     * @internal Use Mixpanel::forCompany().
+     * @param string|int $company_id the id of the top-level company
+     * @return Producers_MixpanelGroups
+     * @throws InvalidArgumentException if $company_id is empty or only whitespace, or on a hierarchical groups
+     * project contains "|"
+     */
+    public function forCompany($company_id) {
+        if ((!is_string($company_id) && !is_int($company_id)) || $company_id === "") {
+            throw new InvalidArgumentException("company_id must be a non-empty string or int");
+        }
+        if (MixpanelIdentity::isBlank($company_id)) {
+            throw new InvalidArgumentException("company_id must not be only whitespace");
+        }
+        if ($this->_isHierarchical()) {
+            self::_requireNoSeparator('company_id', $company_id);
+        }
+        $view = clone $this;
+        $view->_bind($this->_root === null ? $this : $this->_root, $company_id);
+        return $view;
+    }
+
+
+    /**
+     * Turns a fresh clone into a view writing to $root's queue
+     * @param Producers_MixpanelGroups $root
+     * @param string|int $company_id
+     */
+    private function _bind($root, $company_id) {
+        // the clone copied the queue; those messages belong to the producer it was cloned from
+        parent::reset();
+        $this->_root = $root;
+        $this->_company_id = $company_id;
+    }
+
+
+    /**
+     * Returns the company bound by forCompany(), or null. It is returned as a string, the form it is sent in,
+     * since Mixpanel does not store an integer $company_id.
+     * @internal Used by the company producer.
+     * @return string|null
+     */
+    public function getCompanyId() {
+        return $this->_company_id === null ? null : (string) $this->_company_id;
+    }
+
+
+    /**
      * Internal method to prepare a message given the message data
      * @param $group_key
      * @param $group_id
@@ -14,8 +93,22 @@ class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
      * @param $value
      * @param boolean $ignore_time If the $ignore_time property is true, Mixpanel will not automatically update the "Last Seen" property of the group Profile. Otherwise, Mixpanel will add a "Last Seen" property associated with the current time
      * @return array
+     * @throws LogicException for hierarchical groups projects when no company is bound
+     * @throws InvalidArgumentException for hierarchical groups projects when $group_key is '$company_id' and
+     * $group_id is not the bound company (the top-level $company_id would win, updating the bound company's profile)
      */
     private function _constructPayload($group_key, $group_id, $operation, $value, $ignore_time = false) {
+        if ($this->_isHierarchical() && $this->_company_id === null) {
+            throw new LogicException("Group profile updates for hierarchical groups projects require a company. "
+                . "Use forCompany(\$company_id) to send them, e.g. \$mp->forCompany(\$company_id)->group->set(...). "
+                . "Nothing to send for group $group_key=$group_id");
+        }
+        if ($this->_isHierarchical() && $group_key === '$company_id'
+            && (string) $group_id !== (string) $this->_company_id) {
+            throw new InvalidArgumentException("Group \$company_id=$group_id does not match company "
+                . "{$this->_company_id}. A company profile is updated through forCompany($group_id)->company. "
+                . "Nothing sent");
+        }
         $payload = array(
             '$token' => $this->_token,
             '$group_key' => $group_key,
@@ -24,6 +117,8 @@ class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
             $operation => $value
         );
         if ($ignore_time === true) $payload['$ignore_time'] = true;
+        // $company_id must be top-level, not inside the operation payload
+        if ($this->_company_id !== null) $payload['$company_id'] = $this->getCompanyId();
         return $payload;
     }
 
@@ -54,12 +149,11 @@ class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
     }
 
     /**
-     * Unset properties on a group profile. If the group does not exist, it creates it with no properties.
-     * If it does exist, it unsets these properties. NOTE: In other libraries we use 'unset' which is
-     * a reserved word in PHP.
+     * Remove values from list properties on a group profile. If the group does not exist, it creates it
+     * with no properties. If it does exist, it removes each given value from the list property it is keyed by.
      * @param string|int $group_key the group_key used for groups in Project Settings
      * @param string|int $group_id the group id used for the group profile
-     * @param array $props associative array of properties to unset on the group profile
+     * @param array $props associative array of list property names to the value to remove from each
      * @param boolean $ignore_time If the $ignore_time property is true, Mixpanel will not automatically update the "Last Seen" property of the group profile. Otherwise, Mixpanel will add a "Last Seen" property associated with the current time
      */
     public function remove($group_key, $group_id, $props, $ignore_time = false) {
@@ -91,6 +185,81 @@ class Producers_MixpanelGroups extends Producers_MixpanelBaseProducer {
         $payload = $this->_constructPayload($group_key, $group_id, '$delete', "", $ignore_time);
         $this->enqueue($payload);
     }
+
+    /**
+     * Add an array representing a message to be sent to Mixpanel to the queue (the bound producer's queue for a
+     * forCompany() view).
+     * @param array $message
+     */
+    public function enqueue($message = array()) {
+        if ($this->_root !== null) {
+            $this->_root->enqueue($message);
+        } else {
+            parent::enqueue($message);
+        }
+    }
+
+
+    /**
+     * Flush the queue (the bound producer's queue for a forCompany() view)
+     * @param int $desired_batch_size
+     * @return bool whether or not the flush was successful
+     */
+    public function flush($desired_batch_size = 50) {
+        if ($this->_root !== null) {
+            return $this->_root->flush($desired_batch_size);
+        }
+        return parent::flush($desired_batch_size);
+    }
+
+
+    /**
+     * Empties the queue (the bound producer's queue for a forCompany() view) without persisting any of the messages
+     */
+    public function reset() {
+        if ($this->_root !== null) {
+            $this->_root->reset();
+        } else {
+            parent::reset();
+        }
+    }
+
+
+    /**
+     * Removes the queued user profile updates (group key $user_id) without persisting them, and keeps every other
+     * group profile update
+     * @internal Used by the people producer's reset() on a hierarchical groups project.
+     */
+    public function resetUserProfileUpdates() {
+        if ($this->_root !== null) {
+            $this->_root->resetUserProfileUpdates();
+            return;
+        }
+        $this->_removeQueuedWithGroupKey(self::USER_GROUP_KEY);
+    }
+
+
+    /**
+     * Returns the in-memory queue (the bound producer's queue for a forCompany() view)
+     * @return array
+     */
+    public function getQueue() {
+        if ($this->_root !== null) {
+            return $this->_root->getQueue();
+        }
+        return parent::getQueue();
+    }
+
+
+    /**
+     * A forCompany() view leaves flushing to the producer that owns the queue, which outlives it
+     */
+    public function __destruct() {
+        if ($this->_root === null) {
+            parent::__destruct();
+        }
+    }
+
 
     /**
      * Returns the "groups" endpoint
