@@ -1593,6 +1593,36 @@ class HierarchicalGroupsTest extends \PHPUnit\Framework\TestCase {
         $this->assertArrayNotHasKey('$user_id', $props);
     }
 
+    public function testTrackWithIdentityMatchesTheThirdArgument() {
+        $this->_hg_events->track("Signup", array("plan" => "pro"), self::hgUser());
+        $viaTrack = self::lastEventProperties($this->_hg_events);
+        $this->_hg_events->trackWithIdentity("Signup", array("plan" => "pro"), self::hgUser());
+        $viaMethod = self::lastEventProperties($this->_hg_events);
+        unset($viaTrack['time'], $viaMethod['time']);
+        $this->assertEquals($viaTrack, $viaMethod);
+        $this->assertSame("user_123", $viaMethod['$user_id']);
+        $this->assertSame("acme", $viaMethod['$company_id']);
+
+        $method = new ReflectionMethod("Producers_MixpanelEvents", "trackWithIdentity");
+        $this->assertEquals("MixpanelIdentity", $method->getParameters()[2]->getType()->getName());
+        $method = new ReflectionMethod("Mixpanel", "trackWithIdentity");
+        $this->assertEquals("MixpanelIdentity", $method->getParameters()[2]->getType()->getName());
+    }
+
+    public function testTrackWithIdentityKeepsTheIdentityWhenASubclassOverridesTrack() {
+        $events = new HierarchicalGroupsTest_TwoArgumentEvents("token", array("hierarchical_groups" => true));
+        $events->trackWithIdentity("Signup", array(), self::hgUser());
+        $props = self::lastEventProperties($events);
+        $this->assertSame("user_123", $props['$user_id']);
+        $this->assertSame("acme", $props['$company_id']);
+        $events->reset();
+    }
+
+    public function testTrackWithIdentityRefusesAnInvalidIdentity() {
+        $this->expectException(InvalidArgumentException::class);
+        $this->_hg_events->trackWithIdentity("Signup", array(), self::identity(array("user_id" => "a|b", "company_id" => "acme")));
+    }
+
     public function testSeparatorInHierarchicalIdsIsRejected() {
         $hg = $this->_hg;
         $events = $this->_hg_events;

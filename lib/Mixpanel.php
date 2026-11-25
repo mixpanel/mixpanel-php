@@ -282,7 +282,8 @@ class Mixpanel extends Base_MixpanelBase {
      *
      * Pass a MixpanelIdentity as an optional third argument, track($event, $properties, $identity), to say who
      * this event belongs to, overriding identify(). It is read with func_get_arg() rather than declared, so
-     * subclasses that override track($event, $properties) stay compatible.
+     * subclasses that override track($event, $properties) stay compatible; trackWithIdentity() is the same call
+     * with the identity declared, for static analysers and IDEs.
      *
      * When an identity applies, either that third argument or one set with identify(MixpanelIdentity), its keys
      * replace any values for the same keys in $properties.
@@ -293,6 +294,22 @@ class Mixpanel extends Base_MixpanelBase {
     public function track($event, $properties = array()) {
         $identity = func_num_args() > 2 ? func_get_arg(2) : null;
         $this->_events->track($event, $properties, $identity);
+    }
+
+
+    /**
+     * Track an event defined by $event, with metadata defined by $properties, for the given MixpanelIdentity.
+     *
+     * The same as track($event, $properties, $identity), with the identity declared as a typed parameter so static
+     * analysers and IDEs see it. The identity's keys replace any values for the same keys in $properties, for this
+     * event only.
+     * @param string $event
+     * @param array $properties
+     * @param MixpanelIdentity $identity who the event belongs to
+     * @throws InvalidArgumentException if the identity does not fit this project
+     */
+    public function trackWithIdentity($event, $properties, MixpanelIdentity $identity) {
+        $this->_events->trackWithIdentity($event, $properties, $identity);
     }
 
 

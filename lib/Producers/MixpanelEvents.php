@@ -27,7 +27,8 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
      *
      * Pass a MixpanelIdentity as an optional third argument, track($event, $properties, $identity), to say who
      * the event belongs to, for this event only. It is read with func_get_arg() rather than declared, so
-     * subclasses that override track($event, $properties) stay compatible.
+     * subclasses that override track($event, $properties) stay compatible; trackWithIdentity() is the same call
+     * with the identity declared, for static analysers and IDEs.
      *
      * When an identity applies, either that third argument or one set with identify(MixpanelIdentity), its keys
      * (distinct_id, $user_id, $company_id, $device_id) are written after $properties and replace any values for the
@@ -50,6 +51,35 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
         if ($identity !== null && !($identity instanceof MixpanelIdentity) && !$this->_isHierarchical()) {
             $identity = null;
         }
+        $this->_track($event, $properties, $identity);
+    }
+
+
+    /**
+     * Track an event defined by $event, with metadata defined by $properties, for the given MixpanelIdentity.
+     *
+     * The same as track($event, $properties, $identity), with the identity declared as a typed parameter so static
+     * analysers and IDEs see it. The identity's keys replace any values for the same keys in $properties, for this
+     * event only.
+     * @param string $event
+     * @param array $properties
+     * @param MixpanelIdentity $identity who the event belongs to
+     * @throws InvalidArgumentException if the identity does not fit this project, or on a hierarchical groups
+     * project if its distinct_id names a company or user that differs from its own company_id or user_id
+     */
+    public function trackWithIdentity($event, $properties, MixpanelIdentity $identity) {
+        $this->_track($event, $properties, $identity);
+    }
+
+
+    /**
+     * Shared by track() and trackWithIdentity(), so a subclass overriding track($event, $properties) can't drop
+     * the identity passed to trackWithIdentity().
+     * @param string $event
+     * @param array $properties
+     * @param MixpanelIdentity|null $identity the identity for this event, or null to use identify()'s
+     */
+    private function _track($event, $properties, $identity) {
         if ($identity !== null) {
             $this->_requireIdentityMatchesProject($identity);
             $this->_requireIdentityDistinctIdAgrees($identity);
