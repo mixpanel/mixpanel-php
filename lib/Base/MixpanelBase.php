@@ -22,7 +22,9 @@ class Base_MixpanelBase {
         "people_endpoint"   => "/engage", // host relative endpoint for people updates
         "groups_endpoint"   => "/groups", // host relative endpoint for groups updates
         "use_ssl"           => true, // use ssl when available
-        "error_callback"    => null // callback to use on consumption failures
+        "error_callback"    => null, // callback to use on consumption failures
+        "bot_detection"     => false, // enable AI bot classification
+        "bot_additional_patterns" => array() // additional bot patterns
     );
 
 

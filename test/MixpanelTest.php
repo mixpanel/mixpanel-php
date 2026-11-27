@@ -1,18 +1,20 @@
 <?php
 
-class MixpanelTest extends PHPUnit_Framework_TestCase {
+use PHPUnit\Framework\TestCase;
+
+class MixpanelTest extends TestCase {
 
     /**
      * @var Mixpanel
      */
     protected $_instance = null;
 
-    protected function setUp() {
+    protected function setUp(): void {
         parent::setUp();
         $this->_instance = Mixpanel::getInstance("token");
     }
 
-    protected function tearDown() {
+    protected function tearDown(): void {
         parent::tearDown();
         $this->_instance->reset();
         $this->_instance = null;

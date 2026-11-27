@@ -1,19 +1,21 @@
 <?php
 
-class MixpanelPeopleProducerTest extends PHPUnit_Framework_TestCase {
+use PHPUnit\Framework\TestCase;
+
+class MixpanelPeopleProducerTest extends TestCase {
 
     /**
      * @var Producers_MixpanelPeople
      */
     protected $_instance = null;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->_instance = new Producers_MixpanelPeople("token");
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         parent::tearDown();
         $this->_instance->reset();

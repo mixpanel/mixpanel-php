@@ -1,13 +1,15 @@
 <?php
 
-class ConsumerStrategies_SocketConsumerTest extends PHPUnit_Framework_TestCase {
+use PHPUnit\Framework\TestCase;
+
+class ConsumerStrategies_SocketConsumerTest extends TestCase {
 
     /**
      * @var ConsumerStrategies_SocketConsumer
      */
     protected $_instance = null;
     protected $_file = null;
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->_instance = new ConsumerStrategies_SocketConsumer(array(
@@ -18,7 +20,7 @@ class ConsumerStrategies_SocketConsumerTest extends PHPUnit_Framework_TestCase {
         ));
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         parent::tearDown();
         $this->_instance = null;
