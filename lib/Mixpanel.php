@@ -5,6 +5,9 @@ require_once(dirname(__FILE__) . "/Producers/MixpanelPeople.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelEvents.php");
 require_once(dirname(__FILE__) . "/Producers/MixpanelGroups.php");
 
+// Guard against a second copy of the SDK (e.g. bundled by another plugin) being loaded.
+if (!class_exists('Mixpanel', false)) {
+
 /**
  * This is the main class for the Mixpanel PHP Library which provides all of the methods you need to track events,
   * create/update profiles and group profiles.
@@ -310,4 +313,6 @@ class Mixpanel extends Base_MixpanelBase {
     public function createAlias($distinct_id, $alias) {
         $this->_events->createAlias($distinct_id, $alias);
     }
+}
+
 }

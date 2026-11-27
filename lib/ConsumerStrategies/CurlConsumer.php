@@ -1,6 +1,9 @@
 <?php
 require_once(dirname(__FILE__) . "/AbstractConsumer.php");
 
+// Guard against a second copy of the SDK (e.g. bundled by another plugin) being loaded.
+if (!class_exists('ConsumerStrategies_CurlConsumer', false)) {
+
 /**
  * Consumes messages and sends them to a host/endpoint using cURL
  */
@@ -269,4 +272,6 @@ class ConsumerStrategies_CurlConsumer extends ConsumerStrategies_AbstractConsume
     public function getNumThreads() {
         return $this->_num_threads;
     }
+}
+
 }

@@ -8,6 +8,9 @@ if (!function_exists('json_encode')) {
     throw new Exception('The JSON PHP extension is required.');
 }
 
+// Guard against a second copy of the SDK (e.g. bundled by another plugin) being loaded.
+if (!class_exists('Producers_MixpanelBaseProducer', false)) {
+
 /**
  * Provides some base methods for use by a message Producer
  */
@@ -227,5 +230,7 @@ abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
      * @return string
      */
     abstract function _getEndpoint();
+
+}
 
 }
