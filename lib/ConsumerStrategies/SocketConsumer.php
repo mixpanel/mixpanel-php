@@ -286,9 +286,13 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
 
         }
 
-        // extract status
-        $line_one_exploded = explode(" ", $lines[0]);
-        $status = $line_one_exploded[1];
+		// extract status
+		$line_one_exploded = explode(" ", $lines[0]);
+		if ($line_one_exploded === false || ! isset($line_one_exploded[1])) {
+			$status = "Unable to extract HTTP status from response";
+		} else {
+			$status = $line_one_exploded[1];
+		}
 
         // extract body
         $body = $lines[count($lines) - 1];
@@ -301,12 +305,10 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
             }
         }
 
-        $ret = array(
-            "status"  => $status,
-            "body" => $body,
+        return array(
+	        "status" => $status,
+	        "body"   => $body,
         );
-
-        return $ret;
     }
 
 
