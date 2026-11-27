@@ -1,6 +1,9 @@
 <?php
 require_once(dirname(__FILE__) . "/../Base/MixpanelBase.php");
 
+// Guard against a second copy of the SDK (e.g. bundled by another plugin) being loaded.
+if (!class_exists('ConsumerStrategies_AbstractConsumer', false)) {
+
 /**
  * Provides some base methods for use by a Consumer implementation
  */
@@ -62,4 +65,6 @@ abstract class ConsumerStrategies_AbstractConsumer extends Base_MixpanelBase {
      * @return boolean success or fail
      */
     abstract function persist($batch);
+}
+
 }

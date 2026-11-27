@@ -1,5 +1,9 @@
 <?php
 require_once(dirname(__FILE__) . "/AbstractConsumer.php");
+
+// Guard against a second copy of the SDK (e.g. bundled by another plugin) being loaded.
+if (!class_exists('ConsumerStrategies_FileConsumer', false)) {
+
 /**
  * Consumes messages and writes them to a file
  */
@@ -35,4 +39,6 @@ class ConsumerStrategies_FileConsumer extends ConsumerStrategies_AbstractConsume
             return true;
         }
     }
+}
+
 }

@@ -1,6 +1,9 @@
 <?php
 require_once(dirname(__FILE__) . "/MixpanelBaseProducer.php");
 
+// Guard against a second copy of the SDK (e.g. bundled by another plugin) being loaded.
+if (!class_exists('Producers_MixpanelPeople', false)) {
+
 /**
  * Provides an API to create/update profiles on Mixpanel
  */
@@ -164,5 +167,7 @@ class Producers_MixpanelPeople extends Producers_MixpanelBaseProducer {
     function _getEndpoint() {
         return $this->_options['people_endpoint'];
     }
+
+}
 
 }

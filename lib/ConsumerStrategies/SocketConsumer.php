@@ -33,6 +33,9 @@
  */
 require_once(dirname(__FILE__) . "/AbstractConsumer.php");
 
+// Guard against a second copy of the SDK (e.g. bundled by another plugin) being loaded.
+if (!class_exists('ConsumerStrategies_SocketConsumer', false)) {
+
 /**
  * Consumes messages and writes them to host/endpoint using a persistent socket
  */
@@ -309,5 +312,7 @@ class ConsumerStrategies_SocketConsumer extends ConsumerStrategies_AbstractConsu
         return $ret;
     }
 
+
+}
 
 }

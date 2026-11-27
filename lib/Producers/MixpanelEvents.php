@@ -3,6 +3,9 @@ require_once(dirname(__FILE__) . "/MixpanelBaseProducer.php");
 require_once(dirname(__FILE__) . "/MixpanelPeople.php");
 require_once(dirname(__FILE__) . "/../ConsumerStrategies/CurlConsumer.php");
 
+// Guard against a second copy of the SDK (e.g. bundled by another plugin) being loaded.
+if (!class_exists('Producers_MixpanelEvents', false)) {
+
 /**
  * Provides an API to track events on Mixpanel
  */
@@ -190,4 +193,6 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
     function _getEndpoint() {
         return $this->_options['events_endpoint'];
     }
+}
+
 }

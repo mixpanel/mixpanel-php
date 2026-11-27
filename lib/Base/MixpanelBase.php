@@ -1,5 +1,8 @@
 <?php
 
+// Guard against a second copy of the SDK (e.g. bundled by another plugin) being loaded.
+if (!class_exists('Base_MixpanelBase', false)) {
+
 /**
  * This a Base class which all Mixpanel classes extend from to provide some very basic
  * debugging and logging functionality. It also serves to persist $_options across the library.
@@ -62,5 +65,7 @@ class Base_MixpanelBase {
     protected function _debug() {
         return isset($this->_options["debug"]) && $this->_options["debug"] == true;
     }
+
+}
 
 }
