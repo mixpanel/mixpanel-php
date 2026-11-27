@@ -186,9 +186,10 @@ class Mixpanel extends Base_MixpanelBase {
     /**
      * Flush the events queue
      * @param int $desired_batch_size
+     * @return bool whether or not the flush was successful
      */
     public function flush($desired_batch_size = 50) {
-        $this->_events->flush($desired_batch_size);
+        return $this->_events->flush($desired_batch_size);
     }
 
 

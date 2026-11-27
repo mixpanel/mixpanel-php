@@ -1,5 +1,12 @@
 <?php
 
+class MixpanelTestConsumer extends ConsumerStrategies_AbstractConsumer {
+    public static $succeed = true;
+    public function persist($batch) {
+        return self::$succeed;
+    }
+}
+
 class MixpanelTest extends PHPUnit_Framework_TestCase {
 
     /**
@@ -25,5 +32,21 @@ class MixpanelTest extends PHPUnit_Framework_TestCase {
         $this->assertInstanceOf("Producers_MixpanelPeople", $this->_instance->people);
     }
 
-}
+    public function testFlushReturnsDeliveryResult() {
+        $mp = new Mixpanel("token", array(
+            "consumer"  => "test",
+            "consumers" => array("test" => "MixpanelTestConsumer")
+        ));
 
+        MixpanelTestConsumer::$succeed = true;
+        $mp->track("event");
+        $this->assertTrue($mp->flush());
+
+        MixpanelTestConsumer::$succeed = false;
+        $mp->track("event");
+        $this->assertFalse($mp->flush());
+
+        $mp->reset();
+    }
+
+}
