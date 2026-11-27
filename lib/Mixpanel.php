@@ -185,10 +185,20 @@ class Mixpanel extends Base_MixpanelBase {
 
     /**
      * Flush the events queue
+     *
+     * true confirms delivery only with consumers that wait for the server response: the curl consumer with
+     * fork = false (the default) or the socket consumer with async = false. The forked curl consumer, the async
+     * socket consumer and the file consumer return true without knowing whether Mixpanel accepted the data.
+     *
+     * false means a batch failed: earlier batches may already have been sent, and the failed batch plus every
+     * message after it stays queued. Call flush() again to retry them, or call reset() before tracking the same
+     * events again, otherwise they will be sent twice.
+     *
      * @param int $desired_batch_size
+     * @return bool whether or not the flush was successful
      */
     public function flush($desired_batch_size = 50) {
-        $this->_events->flush($desired_batch_size);
+        return $this->_events->flush($desired_batch_size);
     }
 
 
